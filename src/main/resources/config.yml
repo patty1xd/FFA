@@ -1,0 +1,18 @@
+scoreboard-update-interval: 20
+
+tiers:
+  1:
+    kills-to-advance: 2
+    display: "§7Tier 1"
+  2:
+    kills-to-advance: 3
+    display: "§aT ier 2"
+  3:
+    kills-to-advance: 4
+    display: "§bTier 3"
+  4:
+    kills-to-advance: 5
+    display: "§dTier 4"
+  5:
+    kills-to-advance: 0
+    display: "§6§lTier 5 §6★"
