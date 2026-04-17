@@ -21,4 +21,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FFAKit
-          path: target/FFAKit-1.0.0.
+          path: target/FFAKit-1.0.0-shaded.jar
