@@ -48,6 +48,7 @@ public class TierManager {
             if (player != null) {
                 player.sendMessage("§8[§6FFA§8] §a§lTIER UP! §7You are now " + getTierDisplay(tier + 1) + "§7!");
                 plugin.getKitManager().giveKit(player);
+                plugin.getBoardManager().updateNameTag(player);
             }
         } else {
             tierKills.put(uuid, kills);
@@ -73,6 +74,7 @@ public class TierManager {
         if (player != null) {
             player.sendMessage("§8[§6FFA§8] §c§lTIER DOWN! §7You dropped to " + getTierDisplay(tier - 1) + "§7.");
             plugin.getKitManager().giveKit(player);
+            plugin.getBoardManager().updateNameTag(player);
         }
         plugin.getBoardManager().updatePlayer(player);
     }
@@ -80,7 +82,9 @@ public class TierManager {
     public void setTier(UUID uuid, int tier) {
         playerTier.put(uuid, Math.min(MAX_TIER, Math.max(1, tier)));
         tierKills.put(uuid, 0);
-        plugin.getBoardManager().updatePlayer(Bukkit.getPlayer(uuid));
+        var player = Bukkit.getPlayer(uuid);
+        plugin.getBoardManager().updatePlayer(player);
+        plugin.getBoardManager().updateNameTag(player);
     }
 
     public void resetPlayer(UUID uuid) { setTier(uuid, 1); }
