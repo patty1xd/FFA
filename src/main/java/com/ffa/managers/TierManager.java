@@ -13,12 +13,11 @@ public class TierManager {
 
     private final FFAPlugin plugin;
     private final Map<UUID, Integer> playerTier = new HashMap<>();
-    private final Map<UUID, Integer> tierKills = new HashMap<>(); // kills within current tier
+    private final Map<UUID, Integer> tierKills = new HashMap<>();
     private File dataFile;
     private FileConfiguration dataConfig;
 
-    // kills needed to advance from each tier
-    private static final int[] KILLS_TO_ADVANCE = {0, 2, 3, 4, 5, 0}; // index = tier
+    private static final int[] KILLS_TO_ADVANCE = {0, 2, 3, 4, 5, 0};
     public static final int MAX_TIER = 5;
 
     public TierManager(FFAPlugin plugin) {
@@ -48,7 +47,7 @@ public class TierManager {
             var player = Bukkit.getPlayer(uuid);
             if (player != null) {
                 player.sendMessage("§8[§6FFA§8] §a§lTIER UP! §7You are now " + getTierDisplay(tier + 1) + "§7!");
-                player.sendMessage("§8[§6FFA§8] §7Right-click §eKit §7to get your new kit!");
+                plugin.getKitManager().giveKit(player);
             }
         } else {
             tierKills.put(uuid, kills);
@@ -64,6 +63,8 @@ public class TierManager {
         int tier = getTier(uuid);
         if (tier <= 1) {
             tierKills.put(uuid, 0);
+            var player = Bukkit.getPlayer(uuid);
+            if (player != null) plugin.getKitManager().giveKit(player);
             return;
         }
         playerTier.put(uuid, tier - 1);
@@ -71,6 +72,7 @@ public class TierManager {
         var player = Bukkit.getPlayer(uuid);
         if (player != null) {
             player.sendMessage("§8[§6FFA§8] §c§lTIER DOWN! §7You dropped to " + getTierDisplay(tier - 1) + "§7.");
+            plugin.getKitManager().giveKit(player);
         }
         plugin.getBoardManager().updatePlayer(player);
     }
