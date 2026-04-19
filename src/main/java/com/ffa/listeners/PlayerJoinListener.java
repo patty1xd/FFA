@@ -8,6 +8,8 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.util.List;
+
 public class PlayerJoinListener implements Listener {
 
     private final FFAPlugin plugin;
@@ -22,19 +24,27 @@ public class PlayerJoinListener implements Listener {
         plugin.getBoardManager().updateNameTag(player);
 
         String tierDisplay = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(player.getUniqueId()));
-
-        // Custom join message
         event.setJoinMessage(null);
-        Bukkit.broadcastMessage("§8§m            §r §5§lTIERSTERMC §8§m            ");
-        Bukkit.broadcastMessage("  §7Welcome, " + tierDisplay + " §f" + player.getName() + "§7!");
-        Bukkit.broadcastMessage("  §7There are now §e" + Bukkit.getOnlinePlayers().size() + " §7players online.");
-        Bukkit.broadcastMessage("§8§m            §r §5§l⚔ §8§m            ");
+
+        List<String> lines = plugin.getConfig().getStringList("messages.join-broadcast");
+        for (String line : lines) {
+            String formatted = line
+                .replace("{player}", player.getName())
+                .replace("{tier}", tierDisplay)
+                .replace("{online}", String.valueOf(Bukkit.getOnlinePlayers().size()));
+            Bukkit.broadcastMessage(formatted);
+        }
+
+        String welcome = plugin.getConfig().getString("messages.welcome", "§7Welcome!");
+        player.sendMessage(welcome);
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         plugin.getTierManager().saveAll();
-        event.setQuitMessage("§8[§c-§8] §7" + event.getPlayer().getName() + " §7left the game.");
+        String msg = plugin.getConfig().getString("messages.quit-message", "§7{player} left.")
+            .replace("{player}", event.getPlayer().getName());
+        event.setQuitMessage(msg);
     }
 
     @EventHandler
@@ -42,7 +52,10 @@ public class PlayerJoinListener implements Listener {
         event.setCancelled(true);
         var player = event.getPlayer();
         String tierDisplay = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(player.getUniqueId()));
-        String formatted = tierDisplay + " §f" + player.getName() + " §7» §f" + event.getMessage();
-        player.getServer().broadcastMessage(formatted);
+        String format = plugin.getConfig().getString("chat.format", "{tier} §f{player} §7» §f{message}")
+            .replace("{tier}", tierDisplay)
+            .replace("{player}", player.getName())
+            .replace("{message}", event.getMessage());
+        player.getServer().broadcastMessage(format);
     }
 }
