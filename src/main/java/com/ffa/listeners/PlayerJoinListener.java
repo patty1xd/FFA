@@ -1,6 +1,7 @@
 package com.ffa.listeners;
 
 import com.ffa.FFAPlugin;
+import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
@@ -19,13 +20,21 @@ public class PlayerJoinListener implements Listener {
         plugin.getTierManager().initPlayer(player.getUniqueId());
         plugin.getBoardManager().updatePlayer(player);
         plugin.getBoardManager().updateNameTag(player);
-        player.sendMessage("§8[§6FFA§8] §7Welcome! Right-click the §eKit §7NPC to get your kit.");
-        player.sendMessage("§8[§6FFA§8] §7Your tier: " + plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(player.getUniqueId())));
+
+        String tierDisplay = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(player.getUniqueId()));
+
+        // Custom join message
+        event.setJoinMessage(null);
+        Bukkit.broadcastMessage("§8§m            §r §5§lTIERSTERMC §8§m            ");
+        Bukkit.broadcastMessage("  §7Welcome, " + tierDisplay + " §f" + player.getName() + "§7!");
+        Bukkit.broadcastMessage("  §7There are now §e" + Bukkit.getOnlinePlayers().size() + " §7players online.");
+        Bukkit.broadcastMessage("§8§m            §r §5§l⚔ §8§m            ");
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         plugin.getTierManager().saveAll();
+        event.setQuitMessage("§8[§c-§8] §7" + event.getPlayer().getName() + " §7left the game.");
     }
 
     @EventHandler
