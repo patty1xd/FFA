@@ -20,20 +20,22 @@ public class PlayerKillListener implements Listener {
         Player killer = victim.getKiller();
 
         String victimTier = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(victim.getUniqueId()));
-
-        // Victim drops a tier
         plugin.getTierManager().onDeath(victim.getUniqueId());
 
         if (killer != null && killer != victim) {
             String killerTier = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(killer.getUniqueId()));
             plugin.getTierManager().addKill(killer.getUniqueId());
-
-            // Custom death message
-            event.setDeathMessage(
-                killerTier + " §f" + killer.getName() + " §7slew " + victimTier + " §f" + victim.getName()
-            );
+            String msg = plugin.getConfig().getString("messages.kill-message", "{killer_tier} §f{killer} §7slew {victim_tier} §f{victim}")
+                .replace("{killer_tier}", killerTier)
+                .replace("{killer}", killer.getName())
+                .replace("{victim_tier}", victimTier)
+                .replace("{victim}", victim.getName());
+            event.setDeathMessage(msg);
         } else {
-            event.setDeathMessage(victimTier + " §f" + victim.getName() + " §7died.");
+            String msg = plugin.getConfig().getString("messages.death-message", "{victim_tier} §f{victim} §7died.")
+                .replace("{victim_tier}", victimTier)
+                .replace("{victim}", victim.getName());
+            event.setDeathMessage(msg);
         }
     }
 }
