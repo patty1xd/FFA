@@ -7,6 +7,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.List;
+import java.util.Map;
+
 public class KitManager {
 
     private final FFAPlugin plugin;
@@ -15,19 +18,18 @@ public class KitManager {
 
     public void giveKit(Player player) {
         int tier = plugin.getTierManager().getTier(player.getUniqueId());
+        String path = "tiers." + tier + ".kit.";
 
-        // Replace armor
-        player.getInventory().setHelmet(buildArmor(Material.DIAMOND_HELMET, tier));
-        player.getInventory().setChestplate(buildArmor(Material.DIAMOND_CHESTPLATE, tier));
-        player.getInventory().setLeggings(buildArmor(Material.DIAMOND_LEGGINGS, tier));
-        player.getInventory().setBoots(buildArmor(Material.DIAMOND_BOOTS, tier));
+        player.getInventory().setHelmet(buildItem(path + "helmet"));
+        player.getInventory().setChestplate(buildItem(path + "chestplate"));
+        player.getInventory().setLeggings(buildItem(path + "leggings"));
+        player.getInventory().setBoots(buildItem(path + "boots"));
 
-        // Replace sword — find existing diamond sword and replace it, or add new
-        ItemStack sword = buildSword(tier);
+        ItemStack sword = buildItem(path + "sword");
         boolean replaced = false;
         for (int i = 0; i < player.getInventory().getSize(); i++) {
             ItemStack item = player.getInventory().getItem(i);
-            if (item != null && item.getType() == Material.DIAMOND_SWORD) {
+            if (item != null && item.getType().name().endsWith("_SWORD")) {
                 player.getInventory().setItem(i, sword);
                 replaced = true;
                 break;
@@ -35,50 +37,37 @@ public class KitManager {
         }
         if (!replaced) player.getInventory().addItem(sword);
 
-        // Give golden apples only on first kit (tier 1)
-        if (tier == 1) player.getInventory().addItem(new ItemStack(Material.GOLDEN_APPLE, 3));
+        List<?> items = plugin.getConfig().getList(path + "items");
+        if (items != null) {
+            for (Object obj : items) {
+                if (obj instanceof Map<?,?> map) {
+                    String matName = (String) map.get("material");
+                    int amount = map.containsKey("amount") ? (int) map.get("amount") : 1;
+                    try {
+                        Material mat = Material.valueOf(matName);
+                        player.getInventory().remove(mat);
+                        player.getInventory().addItem(new ItemStack(mat, amount));
+                    } catch (IllegalArgumentException ignored) {}
+                }
+            }
+        }
 
         String tierDisplay = plugin.getTierManager().getTierDisplay(tier);
         player.sendMessage("§8[§6FFA§8] §aKit updated! " + tierDisplay);
     }
 
-    private ItemStack buildArmor(Material mat, int tier) {
+    private ItemStack buildItem(String path) {
+        String matName = plugin.getConfig().getString(path + ".material", "DIAMOND_SWORD");
+        Material mat;
+        try { mat = Material.valueOf(matName); } catch (IllegalArgumentException e) { mat = Material.DIAMOND_SWORD; }
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
-        int prot = tier - 1; // tier 1 = 0, tier 2 = 1, etc.
-        if (prot > 0) meta.addEnchant(Enchantment.PROTECTION, prot, true);
-        meta.addEnchant(Enchantment.UNBREAKING, 3, true);
-        meta.addEnchant(Enchantment.MENDING, 1, true);
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    private ItemStack buildSword(int tier) {
-        ItemStack item = new ItemStack(Material.DIAMOND_SWORD);
-        ItemMeta meta = item.getItemMeta();
-        meta.addEnchant(Enchantment.UNBREAKING, 3, true);
-        meta.addEnchant(Enchantment.MENDING, 1, true);
-        switch (tier) {
-            case 1 -> meta.addEnchant(Enchantment.SHARPNESS, 1, true);
-            case 2 -> {
-                meta.addEnchant(Enchantment.SHARPNESS, 2, true);
-                meta.addEnchant(Enchantment.FIRE_ASPECT, 1, true);
-                meta.addEnchant(Enchantment.SWEEPING_EDGE, 1, true);
-            }
-            case 3 -> {
-                meta.addEnchant(Enchantment.SHARPNESS, 3, true);
-                meta.addEnchant(Enchantment.FIRE_ASPECT, 2, true);
-                meta.addEnchant(Enchantment.SWEEPING_EDGE, 2, true);
-            }
-            case 4 -> {
-                meta.addEnchant(Enchantment.SHARPNESS, 4, true);
-                meta.addEnchant(Enchantment.FIRE_ASPECT, 2, true);
-                meta.addEnchant(Enchantment.SWEEPING_EDGE, 3, true);
-            }
-            case 5 -> {
-                meta.addEnchant(Enchantment.SHARPNESS, 5, true);
-                meta.addEnchant(Enchantment.FIRE_ASPECT, 2, true);
-                meta.addEnchant(Enchantment.SWEEPING_EDGE, 3, true);
+        var enchantSection = plugin.getConfig().getConfigurationSection(path + ".enchants");
+        if (enchantSection != null) {
+            for (String enchName : enchantSection.getKeys(false)) {
+                int level = enchantSection.getInt(enchName);
+                Enchantment ench = Enchantment.getByName(enchName);
+                if (ench != null) meta.addEnchant(ench, level, true);
             }
         }
         item.setItemMeta(meta);
