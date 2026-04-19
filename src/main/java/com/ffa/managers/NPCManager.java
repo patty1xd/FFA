@@ -7,7 +7,6 @@ import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Breeze;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 
 import java.io.File;
@@ -29,8 +28,9 @@ public class NPCManager {
 
     public void spawnNPC(Location loc) {
         removeNPC();
+        String npcName = plugin.getConfig().getString("npc.name", "§6§lKit");
         npcEntity = (Breeze) loc.getWorld().spawnEntity(loc, EntityType.BREEZE);
-        npcEntity.setCustomName("§6§lKit");
+        npcEntity.setCustomName(npcName);
         npcEntity.setCustomNameVisible(true);
         npcEntity.setAI(false);
         npcEntity.setInvulnerable(true);
@@ -38,13 +38,10 @@ public class NPCManager {
         npcEntity.setGravity(true);
         npcUUID = npcEntity.getUniqueId();
         saveNPCData(loc);
-        plugin.getLogger().info("Kit NPC spawned at " + loc);
     }
 
     public void removeNPC() {
-        if (npcEntity != null && !npcEntity.isDead()) {
-            npcEntity.remove();
-        }
+        if (npcEntity != null && !npcEntity.isDead()) npcEntity.remove();
         npcEntity = null;
         npcUUID = null;
         clearNPCData();
@@ -62,11 +59,10 @@ public class NPCManager {
         float yaw = (float) npcConfig.getDouble("yaw");
         float pitch = (float) npcConfig.getDouble("pitch");
         Location loc = new Location(world, x, y, z, yaw, pitch);
-        // Small delay to let world load
         Bukkit.getScheduler().runTaskLater(plugin, () -> spawnNPC(loc), 20L);
     }
 
-    public boolean isNPC(Entity entity) {
+    public boolean isNPC(org.bukkit.entity.Entity entity) {
         if (npcUUID == null) return false;
         return entity.getUniqueId().equals(npcUUID);
     }
