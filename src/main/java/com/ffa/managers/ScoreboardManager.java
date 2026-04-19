@@ -30,7 +30,7 @@ public class ScoreboardManager {
 
         Objective obj = board.getObjective("ffa");
         if (obj != null) obj.unregister();
-        obj = board.registerNewObjective("ffa", Criteria.DUMMY, "§6§l✦ TIERSTERMC");
+        obj = board.registerNewObjective("ffa", Criteria.DUMMY, "§5§l✦ TIERSTERMC");
         obj.setDisplaySlot(DisplaySlot.SIDEBAR);
 
         int tier = plugin.getTierManager().getTier(player.getUniqueId());
@@ -47,7 +47,7 @@ public class ScoreboardManager {
             setLine(obj, "§6§l★ MAX TIER ★", line--);
         }
         setLine(obj, "§8▬▬▬▬▬▬▬▬▬▬▬▬", line--);
-        setLine(obj, "§btierstermc.ungsp.foo", line--);
+        setLine(obj, "§ftierstermc.ungsp.foo", line--);
 
         player.setScoreboard(board);
     }
