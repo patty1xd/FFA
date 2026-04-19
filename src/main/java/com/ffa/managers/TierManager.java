@@ -17,7 +17,6 @@ public class TierManager {
     private File dataFile;
     private FileConfiguration dataConfig;
 
-    private static final int[] KILLS_TO_ADVANCE = {0, 2, 3, 4, 5, 0};
     public static final int MAX_TIER = 5;
 
     public TierManager(FFAPlugin plugin) {
@@ -28,6 +27,14 @@ public class TierManager {
 
     public int getTier(UUID uuid) { return playerTier.getOrDefault(uuid, 1); }
     public int getTierKills(UUID uuid) { return tierKills.getOrDefault(uuid, 0); }
+
+    public int getKillsNeeded(int tier) {
+        return plugin.getConfig().getInt("tiers." + tier + ".kills-to-advance", 0);
+    }
+
+    public String getTierDisplay(int tier) {
+        return plugin.getConfig().getString("tiers." + tier + ".display", "§7[T" + tier + "]");
+    }
 
     public void initPlayer(UUID uuid) {
         if (!playerTier.containsKey(uuid)) {
@@ -40,13 +47,15 @@ public class TierManager {
         int tier = getTier(uuid);
         if (tier >= MAX_TIER) return;
         int kills = getTierKills(uuid) + 1;
-        int needed = KILLS_TO_ADVANCE[tier];
+        int needed = getKillsNeeded(tier);
         if (kills >= needed) {
             playerTier.put(uuid, tier + 1);
             tierKills.put(uuid, 0);
             var player = Bukkit.getPlayer(uuid);
             if (player != null) {
-                player.sendMessage("§8[§6FFA§8] §a§lTIER UP! §7You are now " + getTierDisplay(tier + 1) + "§7!");
+                String msg = plugin.getConfig().getString("messages.tier-up", "§aTIER UP! {tier}")
+                    .replace("{tier}", getTierDisplay(tier + 1));
+                player.sendMessage(msg);
                 plugin.getKitManager().giveKit(player);
                 plugin.getBoardManager().updateNameTag(player);
             }
@@ -54,7 +63,10 @@ public class TierManager {
             tierKills.put(uuid, kills);
             var player = Bukkit.getPlayer(uuid);
             if (player != null) {
-                player.sendMessage("§8[§6FFA§8] §e" + kills + "§7/§e" + needed + " §7kills to advance!");
+                String msg = plugin.getConfig().getString("messages.kill-progress", "§e{kills}§7/§e{needed}")
+                    .replace("{kills}", String.valueOf(kills))
+                    .replace("{needed}", String.valueOf(needed));
+                player.sendMessage(msg);
             }
         }
         plugin.getBoardManager().updatePlayer(Bukkit.getPlayer(uuid));
@@ -72,7 +84,9 @@ public class TierManager {
         tierKills.put(uuid, 0);
         var player = Bukkit.getPlayer(uuid);
         if (player != null) {
-            player.sendMessage("§8[§6FFA§8] §c§lTIER DOWN! §7You dropped to " + getTierDisplay(tier - 1) + "§7.");
+            String msg = plugin.getConfig().getString("messages.tier-down", "§cTIER DOWN! {tier}")
+                .replace("{tier}", getTierDisplay(tier - 1));
+            player.sendMessage(msg);
             plugin.getKitManager().giveKit(player);
             plugin.getBoardManager().updateNameTag(player);
         }
@@ -88,22 +102,6 @@ public class TierManager {
     }
 
     public void resetPlayer(UUID uuid) { setTier(uuid, 1); }
-
-    public String getTierDisplay(int tier) {
-        return switch (tier) {
-            case 1 -> "§7[T1]";
-            case 2 -> "§a[T2]";
-            case 3 -> "§b[T3]";
-            case 4 -> "§d[T4]";
-            case 5 -> "§6§l[T5★]";
-            default -> "§7[T1]";
-        };
-    }
-
-    public int getKillsNeeded(int tier) {
-        if (tier >= MAX_TIER) return 0;
-        return KILLS_TO_ADVANCE[tier];
-    }
 
     public void saveAll() {
         dataConfig.set("tiers", null);
