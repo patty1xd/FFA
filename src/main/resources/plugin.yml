@@ -1,8 +1,9 @@
-name: FFAKit
+name: KoalaFFA
 version: 1.0.0
 main: com.ffa.FFAPlugin
 api-version: '1.21'
-description: FFA Kit plugin with tier system and Breeze NPC
+description: KoalaFFA - FFA Kit plugin with tier system
+authors: [KoalaFFA]
 
 commands:
   spawnnpc:
@@ -23,6 +24,22 @@ commands:
   resetplayer:
     description: Reset a player to tier 1
     usage: /resetplayer <player>
+    permission: ffa.admin
+  msg:
+    description: Send a private message
+    usage: /msg <player> <message>
+  tell:
+    description: Send a private message
+    usage: /tell <player> <message>
+  reply:
+    description: Reply to last message
+    usage: /reply <message>
+  r:
+    description: Reply to last message
+    usage: /r <message>
+  koalaffa:
+    description: Reload KoalaFFA config
+    usage: /koalaffa reload
     permission: ffa.admin
 
 permissions:
