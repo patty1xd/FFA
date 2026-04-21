@@ -3,10 +3,6 @@ package com.ffa;
 import com.ffa.commands.*;
 import com.ffa.listeners.*;
 import com.ffa.managers.*;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class FFAPlugin extends JavaPlugin {
@@ -16,7 +12,6 @@ public class FFAPlugin extends JavaPlugin {
     private NPCManager npcManager;
     private KitManager kitManager;
     private ScoreboardManager scoreboardManager;
-    private GearEffectManager gearEffectManager;
     private NormalizationManager normalizationManager;
     private ChatManager chatManager;
 
@@ -29,7 +24,6 @@ public class FFAPlugin extends JavaPlugin {
         npcManager = new NPCManager(this);
         kitManager = new KitManager(this);
         scoreboardManager = new ScoreboardManager(this);
-        gearEffectManager = new GearEffectManager(this);
         normalizationManager = new NormalizationManager(this);
         chatManager = new ChatManager(this);
 
@@ -53,7 +47,6 @@ public class FFAPlugin extends JavaPlugin {
             sender.sendMessage("§cUsage: /koalaffa reload"); return true;
         });
 
-        // /msg and /tell commands
         MsgCommand msgCmd = new MsgCommand(this);
         getCommand("msg").setExecutor(msgCmd);
         getCommand("tell").setExecutor(msgCmd);
@@ -79,7 +72,6 @@ public class FFAPlugin extends JavaPlugin {
     public NPCManager getNPCManager() { return npcManager; }
     public KitManager getKitManager() { return kitManager; }
     public ScoreboardManager getBoardManager() { return scoreboardManager; }
-    public GearEffectManager getGearEffectManager() { return gearEffectManager; }
     public NormalizationManager getNormalizationManager() { return normalizationManager; }
     public ChatManager getChatManager() { return chatManager; }
 }
