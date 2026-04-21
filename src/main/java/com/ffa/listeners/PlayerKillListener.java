@@ -2,12 +2,10 @@ package com.ffa.listeners;
 
 import com.ffa.FFAPlugin;
 import org.bukkit.Bukkit;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 
 public class PlayerKillListener implements Listener {
@@ -42,18 +40,5 @@ public class PlayerKillListener implements Listener {
                 .replace("{victim}", victim.getName());
             event.setDeathMessage(msg);
         }
-    }
-
-    @EventHandler(priority = EventPriority.HIGH)
-    public void onEntityDamage(EntityDamageByEntityEvent event) {
-        if (!(event.getEntity() instanceof Player victim)) return;
-        if (!(event.getDamager() instanceof Player attacker)) return;
-        plugin.getGearEffectManager().applyOffensiveEffects(attacker, victim);
-        double newDamage = plugin.getGearEffectManager().applyDefensiveEffects(victim, attacker, event.getDamage());
-        if (newDamage <= 0) event.setCancelled(true);
-        else event.setDamage(newDamage);
-        double hp = attacker.getHealth(), maxHp = attacker.getAttribute(Attribute.MAX_HEALTH).getValue();
-        if (hp / maxHp < 0.5 && plugin.getGearEffectManager().hasArmorPiece(attacker, "§c§lSkull of the Frenzied"))
-            event.setDamage(event.getDamage() + 2.0);
     }
 }
