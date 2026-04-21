@@ -1,6 +1,7 @@
 package com.ffa.managers;
 
 import com.ffa.FFAPlugin;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.*;
@@ -17,7 +18,7 @@ public class ScoreboardManager {
     public ScoreboardManager(FFAPlugin plugin) { this.plugin = plugin; }
 
     public void startUpdater() {
-        int interval = plugin.getConfig().getInt("scoreboard.update-interval", 20);
+        int interval = plugin.getConfig().getInt("scoreboard-update-interval", 20);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) updatePlayer(p);
         }, interval, interval);
@@ -30,9 +31,7 @@ public class ScoreboardManager {
 
         Objective obj = board.getObjective("ffa");
         if (obj != null) obj.unregister();
-
-        String title = plugin.getConfig().getString("scoreboard.title", "§5§l✦ TIERSTERMC");
-        obj = board.registerNewObjective("ffa", Criteria.DUMMY, title);
+        obj = board.registerNewObjective("ffa", Criteria.DUMMY, "§5§l✦ KOALAFFA");
         obj.setDisplaySlot(DisplaySlot.SIDEBAR);
 
         int tier = plugin.getTierManager().getTier(player.getUniqueId());
@@ -40,58 +39,55 @@ public class ScoreboardManager {
         int needed = plugin.getTierManager().getKillsNeeded(tier);
         String tierDisplay = plugin.getTierManager().getTierDisplay(tier);
 
-        String divider = plugin.getConfig().getString("scoreboard.divider", "§8▬▬▬▬▬▬▬▬▬▬▬▬");
-        String tierLine = plugin.getConfig().getString("scoreboard.tier-line", "§7Tier: {tier}")
-            .replace("{tier}", tierDisplay);
-        String ipLine = plugin.getConfig().getString("scoreboard.ip-line", "§ftierstermc.ungsp.foo");
-
         int line = 8;
-        setLine(obj, divider, line--);
-        setLine(obj, tierLine, line--);
+        setLine(obj, "§8▬▬▬▬▬▬▬▬▬▬▬▬", line--);
+        setLine(obj, "§7Tier: " + tierDisplay, line--);
         if (tier < TierManager.MAX_TIER) {
-            String progressLine = plugin.getConfig().getString("scoreboard.progress-line", "§7Progress: §e{kills}§7/§e{needed}")
-                .replace("{kills}", String.valueOf(kills))
-                .replace("{needed}", String.valueOf(needed));
-            setLine(obj, progressLine, line--);
+            setLine(obj, "§7Kill Progress: §e" + kills + "§7/§e" + needed, line--);
         } else {
-            String maxLine = plugin.getConfig().getString("scoreboard.max-tier-line", "§6§l★ MAX TIER ★");
-            setLine(obj, maxLine, line--);
+            setLine(obj, "§4§l☠ MAX TIER ☠", line--);
         }
-        setLine(obj, divider + " ", line--);
-        setLine(obj, ipLine, line--);
+        setLine(obj, "§8▬▬▬▬▬▬▬▬▬▬▬▬ ", line--);
+        setLine(obj, "§ftierstermc.ungsp.foo", line--);
 
         player.setScoreboard(board);
 
         // TAB header/footer
-        String header = plugin.getConfig().getString("tab.header", "§5§lTIERSTERMC")
-            .replace("{online}", String.valueOf(Bukkit.getOnlinePlayers().size()));
-        String footer = plugin.getConfig().getString("tab.footer", "§7Players online: §e{online}")
-            .replace("{online}", String.valueOf(Bukkit.getOnlinePlayers().size()));
+        String header = plugin.getConfig().getString("tab.header", "§5§lKOALAFFA")
+            .replace("{online}", String.valueOf(Bukkit.getOnlinePlayers().size()))
+            .replace("&", "§");
+        String footer = plugin.getConfig().getString("tab.footer", "§7Players: §e{online}")
+            .replace("{online}", String.valueOf(Bukkit.getOnlinePlayers().size()))
+            .replace("&", "§");
         player.sendPlayerListHeaderAndFooter(
-            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(header),
-            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(footer)
+            LegacyComponentSerializer.legacySection().deserialize(header),
+            LegacyComponentSerializer.legacySection().deserialize(footer)
         );
+
+        updateNameTag(player);
     }
 
     public void updateNameTag(Player player) {
         if (player == null) return;
         int tier = plugin.getTierManager().getTier(player.getUniqueId());
         String tierDisplay = plugin.getTierManager().getTierDisplay(tier);
+        int ping = player.getPing();
+        String pingColor = ping < 50 ? "§a" : ping < 100 ? "§e" : ping < 200 ? "§6" : "§c";
 
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            Scoreboard board = p.getScoreboard();
-            if (board == null) continue;
-            String teamName = "ffa_" + player.getName().substring(0, Math.min(12, player.getName().length()));
-            Team team = board.getTeam(teamName);
-            if (team == null) team = board.registerNewTeam(teamName);
+        // Update on all scoreboards
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            Scoreboard board = viewer.getScoreboard();
+            if (board == Bukkit.getScoreboardManager().getMainScoreboard()) continue;
+            String teamKey = "ffa_" + player.getName().substring(0, Math.min(12, player.getName().length()));
+            Team team = board.getTeam(teamKey);
+            if (team == null) team = board.registerNewTeam(teamKey);
             team.setPrefix(tierDisplay + " ");
             team.addEntry(player.getName());
         }
 
-        String tabFormat = plugin.getConfig().getString("tab.format", "{tier} §f{player}")
-            .replace("{tier}", tierDisplay)
-            .replace("{player}", player.getName());
-        player.setPlayerListName(tabFormat);
+        // TAB: tier | playername | ping (multicolumn friendly)
+        String tabName = tierDisplay + " §f" + player.getName() + " §8| " + pingColor + ping + "ms";
+        player.setPlayerListName(tabName);
     }
 
     private void setLine(Objective obj, String text, int score) {
