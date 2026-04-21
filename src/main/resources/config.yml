@@ -1,41 +1,90 @@
-###############################################
-#           TIERSTERMC FFA CONFIG             #
-###############################################
+scoreboard-update-interval: 20
+normalization-check-interval: 40
 
-scoreboard:
-  update-interval: 20
-  title: "§5§l✦ TIERSTERMC"
-  divider: "§8▬▬▬▬▬▬▬▬▬▬▬▬"
-  tier-line: "§7Tier: {tier}"
-  progress-line: "§7Progress: §e{kills}§7/§e{needed}"
-  max-tier-line: "§6§l★ MAX TIER ★"
-  ip-line: "§ftierstermc.ungsp.foo"
-
+# TAB list settings
 tab:
-  header: "§5§l✦ TIERSTERMC §5§l✦\n§7tierstermc.ungsp.foo"
+  header: "§5§l✦ KOALAFFA §5§l✦\n§7Play and climb the tiers!"
   footer: "§7Players online: §e{online}"
-  format: "{tier} §f{player}"
 
+# Chat format: {tier} {player} » {message}
 chat:
   format: "{tier} §f{player} §7» §f{message}"
+  msg-format: "§8[§dPM§8] §f{sender} §7→ §f{receiver}§7: §f{message}"
+  msg-spy-format: "§8[§7SPY§8] §f{sender} §7→ §f{receiver}§7: §f{message}"
 
+# Messages
+messages:
+  join:
+    - "§8§m          §r §5§lKOALAFFA §8§m          "
+    - "  §7Welcome, {tier} §f{player}§7!"
+    - "  §7There are now §e{online} §7players online."
+    - "§8§m          §r §5§l⚔ §8§m          "
+  quit: "§8[§c-§8] {tier} §f{player} §7left."
+  kill: "§8[§c☠§8] {killer_tier} §f{killer} §7killed {victim_tier} §f{victim}"
+  death: "§8[§c☠§8] {victim_tier} §f{victim} §7died."
+  tier-up: "§8[§6FFA§8] §a§lTIER UP! §7You are now {tier}§7!"
+  tier-down: "§8[§6FFA§8] §c§lTIER DOWN! §7You dropped to {tier}§7."
+  kill-progress: "§8[§6FFA§8] §e{kills}§7/§e{needed} §7kill progress to next tier!"
+  kill-no-progress: "§8[§6FFA§8] §7Killing lower tier players gives no progress."
+  kill-reduced-progress: "§8[§6FFA§8] §7Kill counted but reduced progress: §e{kills}§7/§e{needed}§7."
+  no-reply-target: "§cYou have no one to reply to."
+  player-offline: "§cThat player is offline."
+  msg-usage: "§cUsage: /msg <player> <message>"
+  item-normalized: "§7Your gear was adjusted to your tier."
+
+# NPC settings
 npc:
   name: "§6§lKit"
 
-messages:
-  join-broadcast:
-    - "§8§m            §r §5§lTIERSTERMC §8§m            "
-    - "  §7Welcome, {tier} §f{player}§7!"
-    - "  §7There are now §e{online} §7players online."
-    - "§8§m            §r §5§l⚔ §8§m            "
-  quit-message: "§8[§c-§8] §7{player} §7left the game."
-  kill-message: "{killer_tier} §f{killer} §7slew {victim_tier} §f{victim}"
-  death-message: "{victim_tier} §f{victim} §7died."
-  tier-up: "§8[§6FFA§8] §a§lTIER UP! §7You are now {tier}§7!"
-  tier-down: "§8[§6FFA§8] §c§lTIER DOWN! §7You dropped to {tier}§7."
-  kill-progress: "§8[§6FFA§8] §e{kills}§7/§e{needed} §7kills to advance!"
-  welcome: "§8[§6FFA§8] §7Welcome! Right-click the §eKit §7NPC to get your kit."
+# Kill progress restrictions per tier matchup
+# killer-tier -> victim-tier -> action
+# action: "full", "none", or "reduced: X" (X = kills to give, can be decimal like 0.5)
+# Example: tier 5 killing tier 1 gives no progress
+kill-restrictions:
+  5:
+    1: "none"
+    2: "none"
+    3: "reduced:0.5"
+    4: "full"
+    5: "full"
+    6: "full"
+  4:
+    1: "none"
+    2: "reduced:0.5"
+    3: "full"
+    4: "full"
+    5: "full"
+    6: "full"
+  3:
+    1: "reduced:0.5"
+    2: "full"
+    3: "full"
+    4: "full"
+    5: "full"
+    6: "full"
+  2:
+    1: "full"
+    2: "full"
+    3: "full"
+    4: "full"
+    5: "full"
+    6: "full"
+  1:
+    1: "full"
+    2: "full"
+    3: "full"
+    4: "full"
+    5: "full"
+    6: "full"
+  6:
+    1: "none"
+    2: "none"
+    3: "none"
+    4: "reduced:0.5"
+    5: "full"
+    6: "full"
 
+# Tier settings
 tiers:
   1:
     display: "§7[T1]"
@@ -193,7 +242,7 @@ tiers:
           amount: 8
   5:
     display: "§6§l[T5★]"
-    kills-to-advance: 0
+    kills-to-advance: 6
     kit:
       helmet:
         material: DIAMOND_HELMET
@@ -231,3 +280,43 @@ tiers:
       items:
         - material: GOLDEN_APPLE
           amount: 10
+  6:
+    display: "§4§l[T6☠]"
+    kills-to-advance: 0
+    kit:
+      helmet:
+        material: DIAMOND_HELMET
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+          MENDING: 1
+      chestplate:
+        material: DIAMOND_CHESTPLATE
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+          MENDING: 1
+      leggings:
+        material: DIAMOND_LEGGINGS
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+          MENDING: 1
+      boots:
+        material: DIAMOND_BOOTS
+        enchants:
+          PROTECTION: 4
+          UNBREAKING: 3
+          MENDING: 1
+          FEATHER_FALLING: 4
+      sword:
+        material: NETHERITE_SWORD
+        enchants:
+          SHARPNESS: 5
+          FIRE_ASPECT: 2
+          SWEEPING_EDGE: 3
+          UNBREAKING: 3
+          MENDING: 1
+      items:
+        - material: GOLDEN_APPLE
+          amount: 12
