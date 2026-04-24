@@ -320,3 +320,13 @@ tiers:
       items:
         - material: GOLDEN_APPLE
           amount: 12
+
+# Kill streak settings
+streaks:
+  milestones:
+    - 5
+    - 10
+    - 15
+    - 20
+    - 25
+  message: "&6⚡ &e{player} &6is on a &c{streak} kill streak&6!"
