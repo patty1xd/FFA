@@ -2,10 +2,6 @@ package com.ffa.listeners;
 
 import com.ffa.FFAPlugin;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
@@ -24,6 +20,7 @@ public class PlayerJoinListener implements Listener {
     public void onJoin(PlayerJoinEvent event) {
         var player = event.getPlayer();
         plugin.getTierManager().initPlayer(player.getUniqueId());
+        plugin.getStatsManager().initPlayer(player.getUniqueId(), player.getName());
         plugin.getBoardManager().updatePlayer(player);
         plugin.getBoardManager().updateNameTag(player);
         plugin.getNormalizationManager().normalizePlayer(player, false);
@@ -33,18 +30,18 @@ public class PlayerJoinListener implements Listener {
 
         List<String> lines = plugin.getConfig().getStringList("messages.join");
         for (String line : lines) {
-            String formatted = line
+            Bukkit.broadcastMessage(line
                 .replace("{player}", player.getName())
                 .replace("{tier}", tierDisplay)
                 .replace("{online}", String.valueOf(Bukkit.getOnlinePlayers().size()))
-                .replace("&", "§");
-            Bukkit.broadcastMessage(formatted);
+                .replace("&", "§"));
         }
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         plugin.getTierManager().saveAll();
+        plugin.getStatsManager().saveAll();
         plugin.getChatManager().clearPlayer(event.getPlayer().getUniqueId());
         String tierDisplay = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(event.getPlayer().getUniqueId()));
         String msg = plugin.getConfig().getString("messages.quit", "§8[§c-§8] {tier} §f{player} §7left.")
