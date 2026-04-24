@@ -46,3 +46,10 @@ permissions:
   ffa.admin:
     description: Admin access
     default: op
+  stats:
+    description: View player stats
+    usage: /stats [player]
+  hologram:
+    description: Place leaderboard holograms
+    usage: /hologram <kills|deaths|kd|remove>
+    permission: ffa.admin
