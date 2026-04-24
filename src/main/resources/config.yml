@@ -330,3 +330,11 @@ streaks:
     - 20
     - 25
   message: "&6⚡ &e{player} &6is on a &c{streak} kill streak&6!"
+
+# Spawn settings
+spawn:
+  wait-time: 5
+  wait-message: "&eTeleporting to spawn in &f{time}s&e. Don't move!"
+  cancelled-message: "&cTeleport cancelled!"
+  teleported-message: "&aTeleported to spawn!"
+  in-combat-message: "&cYou cannot use /spawn while in combat!"
