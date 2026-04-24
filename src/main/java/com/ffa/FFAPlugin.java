@@ -38,7 +38,6 @@ public class FFAPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
         getServer().getPluginManager().registerEvents(new NPCInteractListener(this), this);
         getServer().getPluginManager().registerEvents(new NPCProtectListener(this), this);
-        getServer().getPluginManager().registerEvents(new GearEffectListener(this), this);
         getServer().getPluginManager().registerEvents(normalizationManager, this);
 
         getCommand("spawnnpc").setExecutor(new SpawnNPCCommand(this));
