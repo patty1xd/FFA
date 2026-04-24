@@ -1,7 +1,6 @@
 package com.ffa.listeners;
 
 import com.ffa.FFAPlugin;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -20,11 +19,20 @@ public class PlayerKillListener implements Listener {
         Player killer = victim.getKiller();
 
         String victimTier = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(victim.getUniqueId()));
+
+        // Stats tracking
+        plugin.getStatsManager().addDeath(victim.getUniqueId());
         plugin.getTierManager().onDeath(victim.getUniqueId());
 
         if (killer != null && killer != victim) {
             String killerTier = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(killer.getUniqueId()));
+
+            // Stats tracking
+            plugin.getStatsManager().addKill(killer.getUniqueId());
             plugin.getTierManager().addKill(killer.getUniqueId(), victim.getUniqueId());
+
+            // Update holograms
+            plugin.getHologramManager().updateAll();
 
             String msg = plugin.getConfig().getString("messages.kill",
                 "§8[§c☠§8] {killer_tier} §f{killer} §7killed {victim_tier} §f{victim}")
