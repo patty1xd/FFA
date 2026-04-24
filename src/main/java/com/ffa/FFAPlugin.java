@@ -16,6 +16,7 @@ public class FFAPlugin extends JavaPlugin {
     private ChatManager chatManager;
     private StatsManager statsManager;
     private HologramManager hologramManager;
+    private SpawnManager spawnManager;
 
     @Override
     public void onEnable() {
@@ -30,6 +31,8 @@ public class FFAPlugin extends JavaPlugin {
         chatManager = new ChatManager(this);
         statsManager = new StatsManager(this);
         hologramManager = new HologramManager(this);
+        spawnManager = new SpawnManager(this);
+        getServer().getPluginManager().registerEvents(spawnManager, this);
 
         getServer().getPluginManager().registerEvents(new PlayerKillListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
@@ -54,6 +57,10 @@ public class FFAPlugin extends JavaPlugin {
         StatsCommand statsCmd = new StatsCommand(this);
         getCommand("stats").setExecutor(statsCmd);
         getCommand("hologram").setExecutor(statsCmd);
+
+        SpawnCommand spawnCmd = new SpawnCommand(this);
+        getCommand("spawn").setExecutor(spawnCmd);
+        getCommand("setspawn").setExecutor(spawnCmd);
 
         MsgCommand msgCmd = new MsgCommand(this);
         getCommand("msg").setExecutor(msgCmd);
@@ -85,4 +92,5 @@ public class FFAPlugin extends JavaPlugin {
     public ChatManager getChatManager() { return chatManager; }
     public StatsManager getStatsManager() { return statsManager; }
     public HologramManager getHologramManager() { return hologramManager; }
+    public SpawnManager getSpawnManager() { return spawnManager; }
 }
