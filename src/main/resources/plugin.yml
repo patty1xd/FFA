@@ -53,3 +53,10 @@ permissions:
     description: Place leaderboard holograms
     usage: /hologram <kills|deaths|kd|remove>
     permission: ffa.admin
+  setspawn:
+    description: Set the FFA spawn
+    usage: /setspawn
+    permission: ffa.admin
+  spawn:
+    description: Teleport to spawn
+    usage: /spawn
