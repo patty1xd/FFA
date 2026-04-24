@@ -41,11 +41,6 @@ commands:
     description: Reload KoalaFFA config
     usage: /koalaffa reload
     permission: ffa.admin
-
-permissions:
-  ffa.admin:
-    description: Admin access
-    default: op
   stats:
     description: View player stats
     usage: /stats [player]
@@ -60,3 +55,8 @@ permissions:
   spawn:
     description: Teleport to spawn
     usage: /spawn
+
+permissions:
+  ffa.admin:
+    description: Admin access
+    default: op
