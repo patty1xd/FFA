@@ -56,7 +56,7 @@ public class SpawnManager implements Listener {
     public void onDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
         // Delay 1 tick so death registers properly
-        Bukkit.getScheduler().runTaskLater(plugin, player::spawnAt, 1L);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> player.spigot().respawn(), 1L);
     }
 
     // /spawn command logic
