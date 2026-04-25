@@ -7,7 +7,7 @@ authors: [KoalaFFA]
 
 commands:
   spawnnpc:
-    description: Spawn the Kit NPC at your location
+    description: Spawn the Kit NPC
     usage: /spawnnpc
     permission: ffa.admin
   removenpc:
@@ -18,7 +18,7 @@ commands:
     description: Check your current tier
     usage: /tier
   settier:
-    description: Set a player's tier (admin)
+    description: Set a player's tier
     usage: /settier <player> <tier>
     permission: ffa.admin
   resetplayer:
@@ -38,7 +38,7 @@ commands:
     description: Reply to last message
     usage: /r <message>
   koalaffa:
-    description: Reload KoalaFFA config
+    description: Reload KoalaFFA
     usage: /koalaffa reload
     permission: ffa.admin
   stats:
@@ -51,6 +51,22 @@ commands:
   spawn:
     description: Teleport to spawn
     usage: /spawn
+  setarena1:
+    description: Set arena corner 1
+    usage: /setarena1
+    permission: ffa.admin
+  setarena2:
+    description: Set arena corner 2
+    usage: /setarena2
+    permission: ffa.admin
+  spawnarnanpc:
+    description: Spawn the arena RTP NPC
+    usage: /spawnarnanpc
+    permission: ffa.admin
+  removearnanpc:
+    description: Remove the arena RTP NPC
+    usage: /removearnanpc
+    permission: ffa.admin
 
 permissions:
   ffa.admin:
