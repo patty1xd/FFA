@@ -338,3 +338,55 @@ spawn:
   cancelled-message: "&cTeleport cancelled!"
   teleported-message: "&aTeleported to spawn!"
   in-combat-message: "&cYou cannot use /spawn while in combat!"
+
+# Death consequences per tier matchup
+# victim-tier -> killer-tier -> action
+# Actions:
+#   "lose-tier"        — drop one tier (default behavior)
+#   "lose-progress"    — reset kill progress but keep tier
+#   "nothing"          — no penalty at all
+# Example: tier 1 dying to tier 5 loses a tier
+# Example: tier 3 dying to tier 1 only loses progress (no tier drop)
+death-consequences:
+  1:
+    1: "lose-tier"
+    2: "lose-tier"
+    3: "lose-tier"
+    4: "lose-tier"
+    5: "lose-tier"
+    6: "lose-tier"
+  2:
+    1: "lose-tier"
+    2: "lose-tier"
+    3: "lose-tier"
+    4: "lose-tier"
+    5: "lose-tier"
+    6: "lose-tier"
+  3:
+    1: "lose-progress"
+    2: "lose-tier"
+    3: "lose-tier"
+    4: "lose-tier"
+    5: "lose-tier"
+    6: "lose-tier"
+  4:
+    1: "lose-progress"
+    2: "lose-progress"
+    3: "lose-tier"
+    4: "lose-tier"
+    5: "lose-tier"
+    6: "lose-tier"
+  5:
+    1: "nothing"
+    2: "lose-progress"
+    3: "lose-progress"
+    4: "lose-tier"
+    5: "lose-tier"
+    6: "lose-tier"
+  6:
+    1: "nothing"
+    2: "nothing"
+    3: "lose-progress"
+    4: "lose-progress"
+    5: "lose-tier"
+    6: "lose-tier"
