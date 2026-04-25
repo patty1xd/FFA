@@ -14,9 +14,19 @@ public class NPCInteractListener implements Listener {
 
     @EventHandler
     public void onInteract(PlayerInteractEntityEvent event) {
-        if (!plugin.getNPCManager().isNPC(event.getRightClicked())) return;
-        event.setCancelled(true);
         Player player = event.getPlayer();
-        plugin.getKitManager().giveKit(player);
+
+        // Kit NPC
+        if (plugin.getNPCManager().isNPC(event.getRightClicked())) {
+            event.setCancelled(true);
+            plugin.getKitManager().giveKit(player);
+            return;
+        }
+
+        // Arena RTP NPC
+        if (plugin.getRTPManager().isNPC(event.getRightClicked())) {
+            event.setCancelled(true);
+            plugin.getRTPManager().teleportRandom(player);
+        }
     }
 }
