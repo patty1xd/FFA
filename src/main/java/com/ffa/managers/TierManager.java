@@ -48,25 +48,51 @@ public class TierManager {
     public void addKill(UUID killerUUID, UUID victimUUID) {
         int killerTier = getTier(killerUUID);
         int victimTier = getTier(victimUUID);
-        if (killerTier >= MAX_TIER) return;
 
-        // Get restriction config
         String restriction = plugin.getConfig().getString(
-            "kill-restrictions." + killerTier + "." + victimTier, "full");
+            "kill-restrictions." + killerTier + "." + victimTier, "progress:1");
 
-        double progress = 0;
-        if (restriction.equalsIgnoreCase("full")) {
-            progress = 1.0;
-        } else if (restriction.equalsIgnoreCase("none")) {
-            var killer = Bukkit.getPlayer(killerUUID);
-            if (killer != null) killer.sendMessage(plugin.getConfig().getString("messages.kill-no-progress",
-                "§7Killing lower tier players gives no progress."));
+        var killer = Bukkit.getPlayer(killerUUID);
+
+        if (restriction.equalsIgnoreCase("none")) {
+            if (killer != null) killer.sendMessage(
+                plugin.getConfig().getString("messages.kill-no-progress",
+                "§8[§6FFA§8] §7This kill gives no progress."));
             return;
-        } else if (restriction.toLowerCase().startsWith("reduced:")) {
-            try {
-                progress = Double.parseDouble(restriction.split(":")[1]);
-            } catch (Exception e) { progress = 1.0; }
         }
+
+        if (restriction.toLowerCase().startsWith("tier:")) {
+            // Instant tier change
+            try {
+                int tiers = Integer.parseInt(restriction.split(":")[1]);
+                int newTier = Math.min(MAX_TIER, Math.max(1, killerTier + tiers));
+                playerTier.put(killerUUID, newTier);
+                tierKills.put(killerUUID, 0.0);
+                if (killer != null) {
+                    if (tiers > 0) {
+                        killer.sendMessage("§8[§6FFA§8] §a§lTIER UP x" + tiers + "! §7You are now " + getTierDisplay(newTier) + "§7!");
+                    } else {
+                        killer.sendMessage("§8[§6FFA§8] §c§lTIER DOWN! §7You are now " + getTierDisplay(newTier) + "§7.");
+                    }
+                    plugin.getKitManager().giveKit(killer);
+                    plugin.getBoardManager().updateNameTag(killer);
+                }
+                plugin.getBoardManager().updatePlayer(killer);
+            } catch (Exception e) { e.printStackTrace(); }
+            return;
+        }
+
+        // progress:X format (or legacy "full"/"reduced:X")
+        double progress = 1.0;
+        if (restriction.toLowerCase().startsWith("progress:")) {
+            try { progress = Double.parseDouble(restriction.split(":")[1]); } catch (Exception e) { progress = 1.0; }
+        } else if (restriction.toLowerCase().startsWith("reduced:")) {
+            try { progress = Double.parseDouble(restriction.split(":")[1]); } catch (Exception e) { progress = 1.0; }
+        } else if (restriction.equalsIgnoreCase("full")) {
+            progress = 1.0;
+        }
+
+        if (killerTier >= MAX_TIER) return;
 
         double currentKills = getTierKillsExact(killerUUID) + progress;
         int needed = getKillsNeeded(killerTier);
@@ -74,7 +100,6 @@ public class TierManager {
         if (currentKills >= needed) {
             playerTier.put(killerUUID, killerTier + 1);
             tierKills.put(killerUUID, 0.0);
-            var killer = Bukkit.getPlayer(killerUUID);
             if (killer != null) {
                 String msg = plugin.getConfig().getString("messages.tier-up", "§aTIER UP! {tier}")
                     .replace("{tier}", getTierDisplay(killerTier + 1));
@@ -84,7 +109,6 @@ public class TierManager {
             }
         } else {
             tierKills.put(killerUUID, currentKills);
-            var killer = Bukkit.getPlayer(killerUUID);
             if (killer != null) {
                 String msgKey = progress < 1.0 ? "kill-reduced-progress" : "kill-progress";
                 String msg = plugin.getConfig().getString("messages." + msgKey,
@@ -94,28 +118,50 @@ public class TierManager {
                 killer.sendMessage(msg);
             }
         }
-        plugin.getBoardManager().updatePlayer(Bukkit.getPlayer(killerUUID));
+        plugin.getBoardManager().updatePlayer(killer);
     }
 
-    public void onDeath(UUID uuid) {
-        int tier = getTier(uuid);
-        if (tier <= 1) {
-            tierKills.put(uuid, 0.0);
-            var player = Bukkit.getPlayer(uuid);
-            if (player != null) plugin.getKitManager().giveKit(player);
-            return;
+    public void onDeath(UUID victimUUID, int killerTier) {
+        int victimTier = getTier(victimUUID);
+        String consequence = plugin.getConfig().getString(
+            "death-consequences." + victimTier + "." + killerTier, "lose-tier");
+
+        var player = Bukkit.getPlayer(victimUUID);
+
+        switch (consequence.toLowerCase()) {
+            case "nothing" -> {
+                if (player != null) player.sendMessage("§8[§6FFA§8] §7No tier penalty this death.");
+            }
+            case "lose-progress" -> {
+                tierKills.put(victimUUID, 0.0);
+                if (player != null) {
+                    String msg = "§8[§6FFA§8] §cYou lost your kill progress!";
+                    player.sendMessage(msg);
+                }
+            }
+            default -> { // lose-tier
+                if (victimTier <= 1) {
+                    tierKills.put(victimUUID, 0.0);
+                    if (player != null) plugin.getKitManager().giveKit(player);
+                    return;
+                }
+                playerTier.put(victimUUID, victimTier - 1);
+                tierKills.put(victimUUID, 0.0);
+                if (player != null) {
+                    String msg = plugin.getConfig().getString("messages.tier-down", "§cTIER DOWN! {tier}")
+                        .replace("{tier}", getTierDisplay(victimTier - 1));
+                    player.sendMessage(msg);
+                    plugin.getKitManager().giveKit(player);
+                    plugin.getBoardManager().updateNameTag(player);
+                }
+                plugin.getBoardManager().updatePlayer(player);
+            }
         }
-        playerTier.put(uuid, tier - 1);
-        tierKills.put(uuid, 0.0);
-        var player = Bukkit.getPlayer(uuid);
-        if (player != null) {
-            String msg = plugin.getConfig().getString("messages.tier-down", "§cTIER DOWN! {tier}")
-                .replace("{tier}", getTierDisplay(tier - 1));
-            player.sendMessage(msg);
-            plugin.getKitManager().giveKit(player);
-            plugin.getBoardManager().updateNameTag(player);
-        }
-        plugin.getBoardManager().updatePlayer(player);
+    }
+
+    // Overload for environmental deaths (no killer)
+    public void onDeath(UUID victimUUID) {
+        onDeath(victimUUID, getTier(victimUUID)); // treat as same tier
     }
 
     public void setTier(UUID uuid, int tier) {
