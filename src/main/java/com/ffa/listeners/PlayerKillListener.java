@@ -30,7 +30,6 @@ public class PlayerKillListener implements Listener {
             plugin.getTierManager().onDeath(victim.getUniqueId(), killerTierInt);
             plugin.getStatsManager().addKill(killer.getUniqueId());
             plugin.getTierManager().addKill(killer.getUniqueId(), victim.getUniqueId());
-            plugin.getHologramManager().updateAll();
 
             String msg = plugin.getConfig().getString("messages.kill",
                 "§8[§c☠§8] {killer_tier} §f{killer} §7killed {victim_tier} §f{victim}")
