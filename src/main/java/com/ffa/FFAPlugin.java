@@ -16,6 +16,7 @@ public class FFAPlugin extends JavaPlugin {
     private ChatManager chatManager;
     private StatsManager statsManager;
     private SpawnManager spawnManager;
+    private RandomTeleportManager rtpManager;
 
     @Override
     public void onEnable() {
@@ -30,6 +31,7 @@ public class FFAPlugin extends JavaPlugin {
         chatManager = new ChatManager(this);
         statsManager = new StatsManager(this);
         spawnManager = new SpawnManager(this);
+        rtpManager = new RandomTeleportManager(this);
 
         getServer().getPluginManager().registerEvents(new PlayerKillListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
@@ -51,8 +53,7 @@ public class FFAPlugin extends JavaPlugin {
             sender.sendMessage("§cUsage: /koalaffa reload"); return true;
         });
 
-        StatsCommand statsCmd = new StatsCommand(this);
-        getCommand("stats").setExecutor(statsCmd);
+        getCommand("stats").setExecutor(new StatsCommand(this));
 
         MsgCommand msgCmd = new MsgCommand(this);
         getCommand("msg").setExecutor(msgCmd);
@@ -65,6 +66,12 @@ public class FFAPlugin extends JavaPlugin {
         getCommand("spawn").setExecutor(spawnCmd);
         getCommand("setspawn").setExecutor(spawnCmd);
 
+        ArenaCommand arenaCmd = new ArenaCommand(this);
+        getCommand("setarena1").setExecutor(arenaCmd);
+        getCommand("setarena2").setExecutor(arenaCmd);
+        getCommand("spawnarnanpc").setExecutor(arenaCmd);
+        getCommand("removearnanpc").setExecutor(arenaCmd);
+
         npcManager.restoreNPC();
         scoreboardManager.startUpdater();
 
@@ -76,6 +83,7 @@ public class FFAPlugin extends JavaPlugin {
         if (tierManager != null) tierManager.saveAll();
         if (statsManager != null) statsManager.saveAll();
         if (npcManager != null) npcManager.removeNPC();
+        if (rtpManager != null) rtpManager.removeNPC();
         getLogger().info("KoalaFFA disabled.");
     }
 
@@ -88,4 +96,5 @@ public class FFAPlugin extends JavaPlugin {
     public ChatManager getChatManager() { return chatManager; }
     public StatsManager getStatsManager() { return statsManager; }
     public SpawnManager getSpawnManager() { return spawnManager; }
+    public RandomTeleportManager getRTPManager() { return rtpManager; }
 }
