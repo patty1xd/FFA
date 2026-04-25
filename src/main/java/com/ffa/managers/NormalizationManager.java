@@ -100,7 +100,6 @@ public class NormalizationManager implements Listener {
     }
 
     private ItemStack normalizeArmor(ItemStack item, int tier, int slot) {
-        // slot: 0=boots, 1=leggings, 2=chestplate, 3=helmet
         String slotName = switch (slot) {
             case 0 -> "boots";
             case 1 -> "leggings";
@@ -109,6 +108,11 @@ public class NormalizationManager implements Listener {
             default -> null;
         };
         if (slotName == null) return null;
+
+        // Only replace if material is wrong — preserve durability
+        String expectedMat = plugin.getConfig().getString("tiers." + tier + ".kit." + slotName + ".material", "DIAMOND_HELMET");
+        if (item.getType() == Material.valueOf(expectedMat)) return null;
+
         return buildNormalizedArmor(slotName, tier);
     }
 
@@ -121,16 +125,17 @@ public class NormalizationManager implements Listener {
         else if (matName.contains("boots")) slotName = "boots";
         if (slotName == null) return null;
 
-        // Check if already correct tier
+        // Only normalize if the MATERIAL is wrong — don't touch enchants/durability
         String expectedMat = plugin.getConfig().getString("tiers." + tier + ".kit." + slotName + ".material", "DIAMOND_HELMET");
-        if (item.getType() == Material.valueOf(expectedMat) && hasCorrectEnchants(item, tier, slotName)) return null;
+        if (item.getType() == Material.valueOf(expectedMat)) return null;
 
         return buildNormalizedArmor(slotName, tier);
     }
 
     private ItemStack normalizeSword(ItemStack item, int tier) {
         String expectedMat = plugin.getConfig().getString("tiers." + tier + ".kit.sword.material", "DIAMOND_SWORD");
-        if (item.getType() == Material.valueOf(expectedMat) && hasCorrectEnchants(item, tier, "sword")) return null;
+        // Only normalize if material is wrong
+        if (item.getType() == Material.valueOf(expectedMat)) return null;
         return buildNormalizedSword(tier);
     }
 
