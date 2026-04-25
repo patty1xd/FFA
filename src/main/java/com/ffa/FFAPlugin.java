@@ -15,7 +15,6 @@ public class FFAPlugin extends JavaPlugin {
     private NormalizationManager normalizationManager;
     private ChatManager chatManager;
     private StatsManager statsManager;
-    private HologramManager hologramManager;
     private SpawnManager spawnManager;
 
     @Override
@@ -30,15 +29,15 @@ public class FFAPlugin extends JavaPlugin {
         normalizationManager = new NormalizationManager(this);
         chatManager = new ChatManager(this);
         statsManager = new StatsManager(this);
-        hologramManager = new HologramManager(this);
         spawnManager = new SpawnManager(this);
-        getServer().getPluginManager().registerEvents(spawnManager, this);
 
         getServer().getPluginManager().registerEvents(new PlayerKillListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
         getServer().getPluginManager().registerEvents(new NPCInteractListener(this), this);
         getServer().getPluginManager().registerEvents(new NPCProtectListener(this), this);
+        getServer().getPluginManager().registerEvents(new GearEffectListener(this), this);
         getServer().getPluginManager().registerEvents(normalizationManager, this);
+        getServer().getPluginManager().registerEvents(spawnManager, this);
 
         getCommand("spawnnpc").setExecutor(new SpawnNPCCommand(this));
         getCommand("removenpc").setExecutor(new RemoveNPCCommand(this));
@@ -55,11 +54,6 @@ public class FFAPlugin extends JavaPlugin {
 
         StatsCommand statsCmd = new StatsCommand(this);
         getCommand("stats").setExecutor(statsCmd);
-        getCommand("hologram").setExecutor(statsCmd);
-
-        SpawnCommand spawnCmd = new SpawnCommand(this);
-        getCommand("spawn").setExecutor(spawnCmd);
-        getCommand("setspawn").setExecutor(spawnCmd);
 
         MsgCommand msgCmd = new MsgCommand(this);
         getCommand("msg").setExecutor(msgCmd);
@@ -67,6 +61,10 @@ public class FFAPlugin extends JavaPlugin {
         ReplyCommand replyCmd = new ReplyCommand(this);
         getCommand("reply").setExecutor(replyCmd);
         getCommand("r").setExecutor(replyCmd);
+
+        SpawnCommand spawnCmd = new SpawnCommand(this);
+        getCommand("spawn").setExecutor(spawnCmd);
+        getCommand("setspawn").setExecutor(spawnCmd);
 
         npcManager.restoreNPC();
         scoreboardManager.startUpdater();
@@ -90,6 +88,5 @@ public class FFAPlugin extends JavaPlugin {
     public NormalizationManager getNormalizationManager() { return normalizationManager; }
     public ChatManager getChatManager() { return chatManager; }
     public StatsManager getStatsManager() { return statsManager; }
-    public HologramManager getHologramManager() { return hologramManager; }
     public SpawnManager getSpawnManager() { return spawnManager; }
 }
