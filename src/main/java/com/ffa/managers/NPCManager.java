@@ -36,6 +36,8 @@ public class NPCManager {
         npcEntity.setInvulnerable(true);
         npcEntity.setSilent(true);
         npcEntity.setGravity(true);
+        npcEntity.setPersistent(true); // prevent despawn on chunk unload
+        npcEntity.setRemoveWhenFarAway(false); // prevent natural despawn
         npcUUID = npcEntity.getUniqueId();
         saveNPCData(loc);
     }
