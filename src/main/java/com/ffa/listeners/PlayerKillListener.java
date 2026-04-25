@@ -22,16 +22,14 @@ public class PlayerKillListener implements Listener {
 
         // Stats tracking
         plugin.getStatsManager().addDeath(victim.getUniqueId());
-        plugin.getTierManager().onDeath(victim.getUniqueId());
 
         if (killer != null && killer != victim) {
             String killerTier = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(killer.getUniqueId()));
+            int killerTierInt = plugin.getTierManager().getTier(killer.getUniqueId());
 
-            // Stats tracking
+            plugin.getTierManager().onDeath(victim.getUniqueId(), killerTierInt);
             plugin.getStatsManager().addKill(killer.getUniqueId());
             plugin.getTierManager().addKill(killer.getUniqueId(), victim.getUniqueId());
-
-            // Update holograms
             plugin.getHologramManager().updateAll();
 
             String msg = plugin.getConfig().getString("messages.kill",
@@ -42,6 +40,7 @@ public class PlayerKillListener implements Listener {
                 .replace("{victim}", victim.getName());
             event.setDeathMessage(msg);
         } else {
+            plugin.getTierManager().onDeath(victim.getUniqueId());
             String msg = plugin.getConfig().getString("messages.death",
                 "§8[§c☠§8] {victim_tier} §f{victim} §7died.")
                 .replace("{victim_tier}", victimTier)
