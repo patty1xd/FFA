@@ -16,20 +16,23 @@ public class NPCProtectListener implements Listener {
     @EventHandler
     public void onDamage(EntityDamageEvent event) {
         if (plugin.getNPCManager().isNPC(event.getEntity())) event.setCancelled(true);
+        if (plugin.getRTPManager().isNPC(event.getEntity())) event.setCancelled(true);
     }
 
     @EventHandler
     public void onTarget(EntityTargetEvent event) {
         if (plugin.getNPCManager().isNPC(event.getEntity())) event.setCancelled(true);
+        if (plugin.getRTPManager().isNPC(event.getEntity())) event.setCancelled(true);
     }
 
     @EventHandler
     public void onDeath(EntityDeathEvent event) {
         if (plugin.getNPCManager().isNPC(event.getEntity())) {
             event.getDrops().clear();
-            // Respawn it
-            org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, () ->
-                plugin.getNPCManager().restoreNPC(), 20L);
+            org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, () -> plugin.getNPCManager().restoreNPC(), 20L);
+        }
+        if (plugin.getRTPManager().isNPC(event.getEntity())) {
+            event.getDrops().clear();
         }
     }
 }
