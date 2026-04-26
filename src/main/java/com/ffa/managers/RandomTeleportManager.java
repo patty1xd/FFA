@@ -50,12 +50,21 @@ public class RandomTeleportManager {
         int maxY = Math.max(corner1.getBlockY(), corner2.getBlockY());
         World world = corner1.getWorld();
 
-        for (int attempt = 0; attempt < 10; attempt++) {
+        for (int attempt = 0; attempt < 20; attempt++) {
             int x = minX + random.nextInt(maxX - minX + 1);
             int z = minZ + random.nextInt(maxZ - minZ + 1);
-            for (int y = maxY; y >= minY; y--) {
-                Location candidate = new Location(world, x, y, z);
-                if (candidate.getBlock().getType().isSolid()) {
+
+            // Search from bottom up, find solid block with 2 air blocks above
+            for (int y = minY; y <= maxY - 2; y++) {
+                org.bukkit.block.Block block = world.getBlockAt(x, y, z);
+                org.bukkit.block.Block above1 = world.getBlockAt(x, y + 1, z);
+                org.bukkit.block.Block above2 = world.getBlockAt(x, y + 2, z);
+
+                if (block.getType().isSolid()
+                    && !block.getType().name().contains("FENCE")
+                    && !block.getType().name().contains("DOOR")
+                    && !above1.getType().isSolid()
+                    && !above2.getType().isSolid()) {
                     Location tp = new Location(world, x + 0.5, y + 1, z + 0.5, random.nextFloat() * 360, 0);
                     player.teleport(tp);
                     return;
