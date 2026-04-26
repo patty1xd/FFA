@@ -14,25 +14,43 @@ public class ArenaCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!(sender instanceof Player p)) { sender.sendMessage("§cPlayers only."); return true; }
-        if (!p.hasPermission("ffa.admin")) { p.sendMessage("§cNo permission."); return true; }
+        if (!sender.hasPermission("ffa.admin")) { sender.sendMessage("§cNo permission."); return true; }
 
         switch (label.toLowerCase()) {
             case "setarena1" -> {
+                if (!(sender instanceof Player p)) { sender.sendMessage("§cPlayers only."); return true; }
                 plugin.getRTPManager().setCorner1(p.getLocation());
-                p.sendMessage("§aArena corner 1 set!");
+                sender.sendMessage("§aArena corner 1 set!");
             }
             case "setarena2" -> {
+                if (!(sender instanceof Player p)) { sender.sendMessage("§cPlayers only."); return true; }
                 plugin.getRTPManager().setCorner2(p.getLocation());
-                p.sendMessage("§aArena corner 2 set!");
+                sender.sendMessage("§aArena corner 2 set!");
             }
             case "spawnarnanpc" -> {
+                if (!(sender instanceof Player p)) { sender.sendMessage("§cPlayers only."); return true; }
                 plugin.getRTPManager().spawnNPC(p.getLocation());
-                p.sendMessage("§aArena NPC spawned!");
+                sender.sendMessage("§aArena NPC spawned!");
             }
             case "removearnanpc" -> {
                 plugin.getRTPManager().removeNPC();
-                p.sendMessage("§cArena NPC removed.");
+                sender.sendMessage("§cArena NPC removed.");
+            }
+            case "savearena" -> {
+                sender.sendMessage("§eSaving arena...");
+                boolean success = plugin.getArenaResetManager().saveArena();
+                if (success) sender.sendMessage("§aArena saved! Auto-reset will use this state.");
+                else sender.sendMessage("§cFailed! Make sure arena corners are set with /setarena1 and /setarena2.");
+            }
+            case "resetarena" -> {
+                sender.sendMessage("§eResetting arena...");
+                org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    boolean success = plugin.getArenaResetManager().resetArena();
+                    org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+                        if (success) sender.sendMessage("§aArena reset complete!");
+                        else sender.sendMessage("§cFailed! Run /savearena first.");
+                    });
+                });
             }
         }
         return true;
