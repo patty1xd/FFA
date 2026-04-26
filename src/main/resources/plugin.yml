@@ -67,11 +67,6 @@ commands:
     description: Remove the arena RTP NPC
     usage: /removearnanpc
     permission: ffa.admin
-
-permissions:
-  ffa.admin:
-    description: Admin access
-    default: op
   savearena:
     description: Save the arena schematic for auto-reset
     usage: /savearena
@@ -80,3 +75,8 @@ permissions:
     description: Manually reset the arena now
     usage: /resetarena
     permission: ffa.admin
+
+permissions:
+  ffa.admin:
+    description: Admin access
+    default: op
