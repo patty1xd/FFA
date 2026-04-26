@@ -390,3 +390,22 @@ death-consequences:
     4: "lose-progress"
     5: "lose-tier"
     6: "lose-tier"
+
+# Arena auto-reset settings
+arena-reset:
+  enabled: true
+  interval-minutes: 15
+  warning-seconds:
+    - 60
+    - 30
+    - 10
+    - 5
+  warning-message: "&c⚠ Arena resetting in &f{time}&c!"
+  reset-message: "&c⚠ Arena is resetting!"
+  done-message: "&aArena has been reset!"
+
+# Arena item/arrow cleanup
+arena-cleanup:
+  enabled: true
+  interval-seconds: 60
+  message: "&7Arena items cleared."
