@@ -17,6 +17,7 @@ public class FFAPlugin extends JavaPlugin {
     private StatsManager statsManager;
     private SpawnManager spawnManager;
     private RandomTeleportManager rtpManager;
+    private ArenaResetManager arenaResetManager;
 
     @Override
     public void onEnable() {
@@ -32,6 +33,7 @@ public class FFAPlugin extends JavaPlugin {
         statsManager = new StatsManager(this);
         spawnManager = new SpawnManager(this);
         rtpManager = new RandomTeleportManager(this);
+        arenaResetManager = new ArenaResetManager(this);
 
         getServer().getPluginManager().registerEvents(new PlayerKillListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
@@ -45,9 +47,9 @@ public class FFAPlugin extends JavaPlugin {
         getCommand("tier").setExecutor(new TierCommand(this));
         getCommand("settier").setExecutor(new SetTierCommand(this));
         getCommand("resetplayer").setExecutor(new ResetPlayerCommand(this));
-        getCommand("koalaffa").setExecutor((sender, cmd, label, args) -> {
+        getCommand("koalaffa").setExecutor((sender, cmd, label, args2) -> {
             if (!sender.hasPermission("ffa.admin")) { sender.sendMessage("§cNo permission."); return true; }
-            if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
+            if (args2.length > 0 && args2[0].equalsIgnoreCase("reload")) {
                 reloadConfig(); sender.sendMessage("§aKoalaFFA reloaded!"); return true;
             }
             sender.sendMessage("§cUsage: /koalaffa reload"); return true;
@@ -71,6 +73,8 @@ public class FFAPlugin extends JavaPlugin {
         getCommand("setarena2").setExecutor(arenaCmd);
         getCommand("spawnarnanpc").setExecutor(arenaCmd);
         getCommand("removearnanpc").setExecutor(arenaCmd);
+        getCommand("savearena").setExecutor(arenaCmd);
+        getCommand("resetarena").setExecutor(arenaCmd);
 
         npcManager.restoreNPC();
         scoreboardManager.startUpdater();
@@ -84,6 +88,7 @@ public class FFAPlugin extends JavaPlugin {
         if (statsManager != null) statsManager.saveAll();
         if (npcManager != null) npcManager.removeNPC();
         if (rtpManager != null) rtpManager.removeNPC();
+        if (arenaResetManager != null) arenaResetManager.stopResetTimer();
         getLogger().info("KoalaFFA disabled.");
     }
 
@@ -97,4 +102,5 @@ public class FFAPlugin extends JavaPlugin {
     public StatsManager getStatsManager() { return statsManager; }
     public SpawnManager getSpawnManager() { return spawnManager; }
     public RandomTeleportManager getRTPManager() { return rtpManager; }
+    public ArenaResetManager getArenaResetManager() { return arenaResetManager; }
 }
