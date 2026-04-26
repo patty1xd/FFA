@@ -34,6 +34,8 @@ public class RandomTeleportManager {
     public void setCorner1(Location loc) { this.corner1 = loc; saveData(); }
     public void setCorner2(Location loc) { this.corner2 = loc; saveData(); }
     public boolean hasArena() { return corner1 != null && corner2 != null; }
+    public Location getCorner1() { return corner1; }
+    public Location getCorner2() { return corner2; }
 
     public void teleportRandom(Player player) {
         if (!hasArena()) {
