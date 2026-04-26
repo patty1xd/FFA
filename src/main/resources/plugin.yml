@@ -72,3 +72,11 @@ permissions:
   ffa.admin:
     description: Admin access
     default: op
+  savearena:
+    description: Save the arena schematic for auto-reset
+    usage: /savearena
+    permission: ffa.admin
+  resetarena:
+    description: Manually reset the arena now
+    usage: /resetarena
+    permission: ffa.admin
