@@ -70,7 +70,7 @@ public class ArenaResetManager {
             }
 
             schematicFile.getParentFile().mkdirs();
-            try (ClipboardWriter writer = BuiltInClipboardFormat.FAST.getWriter(new FileOutputStream(schematicFile))) {
+            try (ClipboardWriter writer = BuiltInClipboardFormat.FAST_V3.getWriter(new FileOutputStream(schematicFile))) {
                 writer.write(clipboard);
             }
             return true;
@@ -87,7 +87,7 @@ public class ArenaResetManager {
         Location c1 = rtp.getCorner1();
         try {
             Clipboard clipboard;
-            try (ClipboardReader reader = BuiltInClipboardFormat.FAST.getReader(new FileInputStream(schematicFile))) {
+            try (ClipboardReader reader = BuiltInClipboardFormat.FAST_V3.getReader(new FileInputStream(schematicFile))) {
                 clipboard = reader.read();
             }
             try (EditSession editSession = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(c1.getWorld()))) {
