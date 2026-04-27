@@ -33,7 +33,6 @@ public class ArenaResetManager {
 
     public ArenaResetManager(FFAPlugin plugin) {
         this.plugin = plugin;
-        // Use plugins/KoalaFFA/arena_backup.schem
         schematicFile = new File(plugin.getDataFolder(), "arena_backup.schem");
         plugin.getLogger().info("Arena schematic path: " + schematicFile.getAbsolutePath());
         plugin.getLogger().info("Arena schematic exists: " + schematicFile.exists());
@@ -71,10 +70,16 @@ public class ArenaResetManager {
             }
 
             schematicFile.getParentFile().mkdirs();
-            try (ClipboardWriter writer = BuiltInClipboardFormat.FAST.getWriter(new FileOutputStream(schematicFile))) {
+            ClipboardFormat format = ClipboardFormats.findByAlias("sponge.3");
+            if (format == null) format = ClipboardFormats.findByAlias("sponge");
+            if (format == null) {
+                plugin.getLogger().warning("Could not find sponge schematic format!");
+                return false;
+            }
+            try (ClipboardWriter writer = format.getWriter(new FileOutputStream(schematicFile))) {
                 writer.write(clipboard);
             }
-            plugin.getLogger().info("Arena saved to: " + schematicFile.getAbsolutePath());
+            plugin.getLogger().info("Arena saved successfully to: " + schematicFile.getAbsolutePath());
             return true;
         } catch (Exception e) {
             plugin.getLogger().severe("saveArena error: " + e.getMessage());
@@ -95,8 +100,14 @@ public class ArenaResetManager {
         }
         Location c1 = rtp.getCorner1();
         try {
+            ClipboardFormat format = ClipboardFormats.findByFile(schematicFile);
+            if (format == null) format = ClipboardFormats.findByAlias("sponge");
+            if (format == null) {
+                plugin.getLogger().warning("resetArena: Could not determine schematic format!");
+                return false;
+            }
             Clipboard clipboard;
-            try (ClipboardReader reader = BuiltInClipboardFormat.FAST.getReader(new FileInputStream(schematicFile))) {
+            try (ClipboardReader reader = format.getReader(new FileInputStream(schematicFile))) {
                 clipboard = reader.read();
             }
             try (EditSession editSession = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(c1.getWorld()))) {
@@ -139,7 +150,8 @@ public class ArenaResetManager {
             }
         }
         if (count > 0) {
-            String msg = plugin.getConfig().getString("arena-cleanup.message", "&7Arena items cleared.").replace("&", "§");
+            String msg = plugin.getConfig().getString("arena-cleanup.message", "&7Arena items cleared.")
+                .replace("&", "§");
             Bukkit.broadcastMessage(msg);
         }
     }
