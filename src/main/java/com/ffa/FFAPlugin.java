@@ -41,6 +41,7 @@ public class FFAPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new NPCProtectListener(this), this);
         getServer().getPluginManager().registerEvents(normalizationManager, this);
         getServer().getPluginManager().registerEvents(spawnManager, this);
+        getServer().getPluginManager().registerEvents(npcManager, this);
 
         getCommand("spawnnpc").setExecutor(new SpawnNPCCommand(this));
         getCommand("removenpc").setExecutor(new RemoveNPCCommand(this));
