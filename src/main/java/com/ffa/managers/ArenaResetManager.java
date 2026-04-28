@@ -180,9 +180,16 @@ public class ArenaResetManager {
                     ticksLeft = intervalTicks;
                     Bukkit.broadcastMessage(plugin.getConfig().getString("arena-reset.reset-message",
                         "&c⚠ Arena is resetting!").replace("&", "§"));
+                    // Read schematic async, paste on main thread
                     Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                        boolean success = resetArena();
+                        // Pre-load the clipboard off main thread
+                        if (!schematicFile.exists()) {
+                            Bukkit.getScheduler().runTask(plugin, () ->
+                                Bukkit.broadcastMessage("§cArena reset failed! Run /savearena first."));
+                            return;
+                        }
                         Bukkit.getScheduler().runTask(plugin, () -> {
+                            boolean success = resetArena();
                             if (success) Bukkit.broadcastMessage(plugin.getConfig().getString(
                                 "arena-reset.done-message", "&aArena has been reset!").replace("&", "§"));
                             else Bukkit.broadcastMessage("§cArena reset failed! Check console for details.");
