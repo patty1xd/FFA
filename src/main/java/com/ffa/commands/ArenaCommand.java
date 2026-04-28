@@ -44,13 +44,9 @@ public class ArenaCommand implements CommandExecutor {
             }
             case "resetarena" -> {
                 sender.sendMessage("§eResetting arena...");
-                org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                    boolean success = plugin.getArenaResetManager().resetArena();
-                    org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
-                        if (success) sender.sendMessage("§aArena reset complete!");
-                        else sender.sendMessage("§cFailed! Run /savearena first.");
-                    });
-                });
+                boolean success = plugin.getArenaResetManager().resetArena();
+                if (success) sender.sendMessage("§aArena reset complete!");
+                else sender.sendMessage("§cFailed! Run /savearena first.");
             }
         }
         return true;
