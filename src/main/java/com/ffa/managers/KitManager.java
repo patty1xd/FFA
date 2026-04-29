@@ -30,8 +30,6 @@ public class KitManager {
         player.getInventory().setLeggings(buildItem(path + "leggings"));
         player.getInventory().setBoots(buildItem(path + "boots"));
 
-        // Clear main inventory
-        player.getInventory().clear();
 
         // Sword — slot 0
         player.getInventory().setItem(0, buildItem(path + "sword"));
@@ -72,10 +70,10 @@ public class KitManager {
         player.getInventory().setItem(5, new ItemStack(Material.COBWEB, 64));
 
         // 3 fire resistance potions (8 min) — slot 6
-        player.getInventory().setItem(6, buildPotion(Material.POTION, PotionEffectType.FIRE_RESISTANCE, 2, 9600, 3));
+        player.getInventory().setItem(6, buildPotion(Material.SPLASH_POTION, PotionEffectType.FIRE_RESISTANCE, 1, 9600, 3));
 
         // 3 speed potions (8 min) — slot 7
-        player.getInventory().setItem(7, buildPotion(Material.POTION, PotionEffectType.SPEED, 1, 9600, 3));
+        player.getInventory().setItem(7, buildPotion(Material.SPLASH_POTION, PotionEffectType.SPEED, 1, 9600, 3));
 
         // 3 stacks of exp bottles — slots 8-10
         player.getInventory().setItem(8, new ItemStack(Material.EXPERIENCE_BOTTLE, 64));
@@ -98,7 +96,7 @@ public class KitManager {
 
         // 19 strength II potions (1m30s = 1800 ticks) — slots 17-35
         for (int i = 17; i <= 35; i++) {
-            player.getInventory().setItem(i, buildPotion(Material.POTION, PotionEffectType.STRENGTH, 2, 1800, 1));
+            player.getInventory().setItem(i, buildPotion(Material.SPLASH_POTION, PotionEffectType.STRENGTH, 2, 1800, 1));
         }
 
         String tierDisplay = plugin.getTierManager().getTierDisplay(tier);
