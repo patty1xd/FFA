@@ -62,14 +62,14 @@ public class KitManager {
         pick.setItemMeta(pickMeta);
         player.getInventory().setItem(2, pick);
 
-         ItemStack pick = new ItemStack(Material.DIAMOND_AXE);
+         ItemStack axe = new ItemStack(Material.DIAMOND_AXE);
         ItemMeta axeMeta = axe.getItemMeta();
         pickMeta.addEnchant(Enchantment.EFFICIENCY, 5, true);
         pickMeta.addEnchant(Enchantment.SILK_TOUCH, 1, true);
         pickMeta.addEnchant(Enchantment.UNBREAKING, 3, true);
         pickMeta.addEnchant(Enchantment.MENDING, 1, true);
         pickMeta.addEnchant(Enchantment.SHARPNESS, 5, true);
-        pick.setItemMeta(axeMeta);
+        axe.setItemMeta(axeMeta);
         player.getInventory().setItem(3, axe);
 
 
