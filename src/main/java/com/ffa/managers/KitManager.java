@@ -88,7 +88,7 @@ public class KitManager {
         player.getInventory().setItem(13, new ItemStack(Material.WATER_BUCKET));
 
         // 64 warped logs — slot 14
-        player.getInventory().setItem(14, new ItemStack(Material.WARPED_LOG, 64));
+        player.getInventory().setItem(14, new ItemStack(Material.WARPED_STEM, 64));
 
         // 64 arrows — slot 15
         player.getInventory().setItem(15, new ItemStack(Material.ARROW, 64));
