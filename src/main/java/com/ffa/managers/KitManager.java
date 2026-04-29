@@ -62,40 +62,51 @@ public class KitManager {
         pick.setItemMeta(pickMeta);
         player.getInventory().setItem(2, pick);
 
+         ItemStack pick = new ItemStack(Material.DIAMOND_AXE);
+        ItemMeta axeMeta = axe.getItemMeta();
+        pickMeta.addEnchant(Enchantment.EFFICIENCY, 5, true);
+        pickMeta.addEnchant(Enchantment.SILK_TOUCH, 1, true);
+        pickMeta.addEnchant(Enchantment.UNBREAKING, 3, true);
+        pickMeta.addEnchant(Enchantment.MENDING, 1, true);
+        pickMeta.addEnchant(Enchantment.SHARPNESS, 5, true);
+        pick.setItemMeta(axeMeta);
+        player.getInventory().setItem(3, axe);
+
+
         // 128 golden apples (2 stacks) — slots 3-4
-        player.getInventory().setItem(3, new ItemStack(Material.GOLDEN_APPLE, 64));
         player.getInventory().setItem(4, new ItemStack(Material.GOLDEN_APPLE, 64));
+        player.getInventory().setItem(5, new ItemStack(Material.GOLDEN_APPLE, 64));
 
         // 64 cobwebs — slot 5
-        player.getInventory().setItem(5, new ItemStack(Material.COBWEB, 64));
+        player.getInventory().setItem(6, new ItemStack(Material.COBWEB, 64));
 
         // 3 fire resistance potions (8 min) — slot 6
-        player.getInventory().setItem(6, buildPotion(Material.SPLASH_POTION, PotionEffectType.FIRE_RESISTANCE, 1, 9600, 3));
+        player.getInventory().setItem(7, buildPotion(Material.SPLASH_POTION, PotionEffectType.FIRE_RESISTANCE, 1, 9600, 3));
 
         // 3 speed potions (8 min) — slot 7
-        player.getInventory().setItem(7, buildPotion(Material.SPLASH_POTION, PotionEffectType.SPEED, 1, 9600, 3));
+        player.getInventory().setItem(8, buildPotion(Material.SPLASH_POTION, PotionEffectType.SPEED, 1, 9600, 3));
 
         // 3 stacks of exp bottles — slots 8-10
-        player.getInventory().setItem(8, new ItemStack(Material.EXPERIENCE_BOTTLE, 64));
         player.getInventory().setItem(9, new ItemStack(Material.EXPERIENCE_BOTTLE, 64));
         player.getInventory().setItem(10, new ItemStack(Material.EXPERIENCE_BOTTLE, 64));
+        player.getInventory().setItem(11, new ItemStack(Material.EXPERIENCE_BOTTLE, 64));
 
         // 3 water buckets — slots 11-13
-        player.getInventory().setItem(11, new ItemStack(Material.WATER_BUCKET));
         player.getInventory().setItem(12, new ItemStack(Material.WATER_BUCKET));
         player.getInventory().setItem(13, new ItemStack(Material.WATER_BUCKET));
+        player.getInventory().setItem(14, new ItemStack(Material.WATER_BUCKET));
 
         // 64 warped logs — slot 14
-        player.getInventory().setItem(14, new ItemStack(Material.WARPED_STEM, 64));
+        player.getInventory().setItem(15, new ItemStack(Material.WARPED_STEM, 64));
 
         // 64 arrows — slot 15
-        player.getInventory().setItem(15, new ItemStack(Material.ARROW, 64));
+        player.getInventory().setItem(16, new ItemStack(Material.ARROW, 64));
 
         // 32 chorus fruit — slot 16
-        player.getInventory().setItem(16, new ItemStack(Material.CHORUS_FRUIT, 32));
+        player.getInventory().setItem(17, new ItemStack(Material.CHORUS_FRUIT, 32));
 
         // 19 strength II potions (1m30s = 1800 ticks) — slots 17-35
-        for (int i = 17; i <= 35; i++) {
+        for (int i = 18; i <= 35; i++) {
             player.getInventory().setItem(i, buildPotion(Material.SPLASH_POTION, PotionEffectType.STRENGTH, 2, 1800, 1));
         }
 
