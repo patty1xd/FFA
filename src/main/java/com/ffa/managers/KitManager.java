@@ -43,9 +43,9 @@ public class KitManager {
         player.getInventory().setItemInOffHand(shield);
 
         // Bow — slot 1
-        ItemStack bow = new ItemStack(Material.BOW);
+ItemStack bow = new ItemStack(Material.BOW);
         ItemMeta bowMeta = bow.getItemMeta();
-        bowMeta.addEnchant(Enchantment.POWER, 5, true);
+        bowMeta.addEnchant(Enchantment.POWER, tier, true);
         bowMeta.addEnchant(Enchantment.UNBREAKING, 3, true);
         bowMeta.addEnchant(Enchantment.INFINITY, 1, true);
         bowMeta.addEnchant(Enchantment.FLAME, 1, true);
@@ -62,13 +62,12 @@ public class KitManager {
         pick.setItemMeta(pickMeta);
         player.getInventory().setItem(2, pick);
 
-         ItemStack axe = new ItemStack(Material.DIAMOND_AXE);
+ItemStack axe = new ItemStack(Material.DIAMOND_AXE);
         ItemMeta axeMeta = axe.getItemMeta();
+        axeMeta.addEnchant(Enchantment.SHARPNESS, tier, true);
         axeMeta.addEnchant(Enchantment.EFFICIENCY, 5, true);
-        axeMeta.addEnchant(Enchantment.SILK_TOUCH, 1, true);
         axeMeta.addEnchant(Enchantment.UNBREAKING, 3, true);
         axeMeta.addEnchant(Enchantment.MENDING, 1, true);
-        axeMeta.addEnchant(Enchantment.SHARPNESS, 5, true);
         axe.setItemMeta(axeMeta);
         player.getInventory().setItem(3, axe);
 
