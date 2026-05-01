@@ -2,6 +2,7 @@ name: KoalaFFA
 version: 1.0.0
 main: com.ffa.FFAPlugin
 api-version: '1.21'
+softdepend: [PlaceholderAPI]
 description: KoalaFFA - FFA Kit plugin with tier system
 authors: [KoalaFFA]
 
@@ -67,6 +68,11 @@ commands:
     description: Remove the arena RTP NPC
     usage: /removearnanpc
     permission: ffa.admin
+
+permissions:
+  ffa.admin:
+    description: Admin access
+    default: op
   savearena:
     description: Save the arena schematic for auto-reset
     usage: /savearena
@@ -75,8 +81,3 @@ commands:
     description: Manually reset the arena now
     usage: /resetarena
     permission: ffa.admin
-
-permissions:
-  ffa.admin:
-    description: Admin access
-    default: op
