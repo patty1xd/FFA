@@ -5,10 +5,11 @@ normalization-check-interval: 40
 tab:
   header: "§5§l✦ KOALAFFA §5§l✦\n§7Play and climb the tiers!"
   footer: "§7Players online: §e{online}"
+  player-format: "{lp_prefix}{tier} §f{player} §8| {ping}ms"
 
 # Chat format: {tier} {player} » {message}
 chat:
-  format: "{tier} §f{player} §7» §f{message}"
+  format: "{lp_prefix}{tier} §f{player} §7» §f{message}"
   msg-format: "§8[§dPM§8] §f{sender} §7→ §f{receiver}§7: §f{message}"
   msg-spy-format: "§8[§7SPY§8] §f{sender} §7→ §f{receiver}§7: §f{message}"
 
@@ -88,81 +89,7 @@ kill-restrictions:
 tiers:
   1:
     display: "§7[T1]"
-    kills-to-advance: 2
-    kit:
-      helmet:
-        material: DIAMOND_HELMET
-        enchants:
-          UNBREAKING: 3
-          MENDING: 1
-      chestplate:
-        material: DIAMOND_CHESTPLATE
-        enchants:
-          UNBREAKING: 3
-          MENDING: 1
-      leggings:
-        material: DIAMOND_LEGGINGS
-        enchants:
-          UNBREAKING: 3
-          MENDING: 1
-      boots:
-        material: DIAMOND_BOOTS
-        enchants:
-          UNBREAKING: 3
-          MENDING: 1
-          FEATHER_FALLING: 4
-      sword:
-        material: DIAMOND_SWORD
-        enchants:
-          SHARPNESS: 1
-          UNBREAKING: 3
-          MENDING: 1
-      items:
-        - material: GOLDEN_APPLE
-          amount: 3
-  2:
-    display: "§a[T2]"
-    kills-to-advance: 3
-    kit:
-      helmet:
-        material: DIAMOND_HELMET
-        enchants:
-          PROTECTION: 1
-          UNBREAKING: 3
-          MENDING: 1
-      chestplate:
-        material: DIAMOND_CHESTPLATE
-        enchants:
-          PROTECTION: 1
-          UNBREAKING: 3
-          MENDING: 1
-      leggings:
-        material: DIAMOND_LEGGINGS
-        enchants:
-          PROTECTION: 1
-          UNBREAKING: 3
-          MENDING: 1
-      boots:
-        material: DIAMOND_BOOTS
-        enchants:
-          PROTECTION: 1
-          UNBREAKING: 3
-          MENDING: 1
-          FEATHER_FALLING: 4
-      sword:
-        material: DIAMOND_SWORD
-        enchants:
-          SHARPNESS: 2
-          FIRE_ASPECT: 1
-          SWEEPING_EDGE: 1
-          UNBREAKING: 3
-          MENDING: 1
-      items:
-        - material: GOLDEN_APPLE
-          amount: 3
-  3:
-    display: "§b[T3]"
-    kills-to-advance: 4
+    kills-to-advance: 5
     kit:
       helmet:
         material: DIAMOND_HELMET
@@ -193,16 +120,11 @@ tiers:
         material: DIAMOND_SWORD
         enchants:
           SHARPNESS: 3
-          FIRE_ASPECT: 2
-          SWEEPING_EDGE: 2
           UNBREAKING: 3
           MENDING: 1
-      items:
-        - material: GOLDEN_APPLE
-          amount: 5
-  4:
-    display: "§d[T4]"
-    kills-to-advance: 5
+  2:
+    display: "§a[T2]"
+    kills-to-advance: 8
     kit:
       helmet:
         material: DIAMOND_HELMET
@@ -233,16 +155,11 @@ tiers:
         material: DIAMOND_SWORD
         enchants:
           SHARPNESS: 4
-          FIRE_ASPECT: 2
-          SWEEPING_EDGE: 3
           UNBREAKING: 3
           MENDING: 1
-      items:
-        - material: GOLDEN_APPLE
-          amount: 8
-  5:
-    display: "§6§l[T5★]"
-    kills-to-advance: 6
+  3:
+    display: "§b[T3]"
+    kills-to-advance: 12
     kit:
       helmet:
         material: DIAMOND_HELMET
@@ -273,15 +190,10 @@ tiers:
         material: DIAMOND_SWORD
         enchants:
           SHARPNESS: 5
-          FIRE_ASPECT: 2
-          SWEEPING_EDGE: 3
           UNBREAKING: 3
           MENDING: 1
-      items:
-        - material: GOLDEN_APPLE
-          amount: 10
-  6:
-    display: "§4§l[T6☠]"
+  4:
+    display: "§6§l[T4☠]"
     kills-to-advance: 0
     kit:
       helmet:
@@ -313,15 +225,10 @@ tiers:
         material: NETHERITE_SWORD
         enchants:
           SHARPNESS: 5
-          FIRE_ASPECT: 2
-          SWEEPING_EDGE: 3
           UNBREAKING: 3
           MENDING: 1
-      items:
-        - material: GOLDEN_APPLE
-          amount: 12
 
-# Kill streak settings
+          # Kill streak settings
 streaks:
   milestones:
     - 5
