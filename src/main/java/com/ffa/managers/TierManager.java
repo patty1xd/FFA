@@ -17,7 +17,7 @@ public class TierManager {
     private File dataFile;
     private FileConfiguration dataConfig;
 
-    public static final int MAX_TIER = 6;
+    public static final int MAX_TIER = 4;
 
     public TierManager(FFAPlugin plugin) {
         this.plugin = plugin;
@@ -74,7 +74,7 @@ public class TierManager {
                     } else {
                         killer.sendMessage("§8[§6FFA§8] §c§lTIER DOWN! §7You are now " + getTierDisplay(newTier) + "§7.");
                     }
-                    plugin.getKitManager().giveKit(killer);
+                    plugin.getKitManager().upgradeKit(killer);
                     plugin.getBoardManager().updateNameTag(killer);
                 }
                 plugin.getBoardManager().updatePlayer(killer);
@@ -104,7 +104,7 @@ public class TierManager {
                 String msg = plugin.getConfig().getString("messages.tier-up", "§aTIER UP! {tier}")
                     .replace("{tier}", getTierDisplay(killerTier + 1));
                 killer.sendMessage(msg);
-                plugin.getKitManager().giveKit(killer);
+                plugin.getKitManager().upgradeKit(killer);
                 plugin.getBoardManager().updateNameTag(killer);
             }
         } else {
