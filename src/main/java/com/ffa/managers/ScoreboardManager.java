@@ -74,20 +74,29 @@ public class ScoreboardManager {
         int ping = player.getPing();
         String pingColor = ping < 50 ? "§a" : ping < 100 ? "§e" : ping < 200 ? "§6" : "§c";
 
-        // Update on all scoreboards
+        // Get LP prefix — empty string if none
+        String lpPrefix = plugin.getChatManager().getLPPrefix(player);
+        String prefixPart = lpPrefix.isEmpty() ? "" : lpPrefix + " ";
+
+        // TAB format from config
+        String tabFormat = plugin.getConfig().getString("tab.player-format", "{lp_prefix}{tier} §f{player} §8| {ping}ms")
+            .replace("{lp_prefix}", prefixPart)
+            .replace("{tier}", tierDisplay)
+            .replace("{player}", player.getName())
+            .replace("{ping}", pingColor + ping)
+            .replace("&", "§");
+        player.setPlayerListName(tabFormat);
+
+        // Nametag above head
         for (Player viewer : Bukkit.getOnlinePlayers()) {
             Scoreboard board = viewer.getScoreboard();
             if (board == Bukkit.getScoreboardManager().getMainScoreboard()) continue;
             String teamKey = "ffa_" + player.getName().substring(0, Math.min(12, player.getName().length()));
             Team team = board.getTeam(teamKey);
             if (team == null) team = board.registerNewTeam(teamKey);
-            team.setPrefix(tierDisplay + " ");
+            team.setPrefix(prefixPart + tierDisplay + " ");
             team.addEntry(player.getName());
         }
-
-        // TAB: tier | playername | ping (multicolumn friendly)
-        String tabName = tierDisplay + " §f" + player.getName() + " §8| " + pingColor + ping + "ms";
-        player.setPlayerListName(tabName);
     }
 
     private void setLine(Objective obj, String text, int score) {
