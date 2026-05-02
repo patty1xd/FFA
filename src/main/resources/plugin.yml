@@ -68,6 +68,9 @@ commands:
     description: Remove the arena RTP NPC
     usage: /removearnanpc
     permission: ffa.admin
+  savearena:
+    description: Saves the arena
+    usage: /savearena
 
 permissions:
   ffa.admin:
