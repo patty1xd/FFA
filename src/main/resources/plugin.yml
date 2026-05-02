@@ -71,6 +71,9 @@ commands:
   savearena:
     description: Saves the arena
     usage: /savearena
+  resetarena:
+    description: Resets the arena
+    usage: /resetarena
 
 permissions:
   ffa.admin:
