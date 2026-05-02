@@ -87,8 +87,8 @@ public class KitManager {
         player.getInventory().setItem(21, new ItemStack(Material.CHORUS_FRUIT, 32));
 
         // 17 strength 1 potions (1m30s) — slots 18-34
-        for (int i = 22; i <= 34; i++) {
-            player.getInventory().setItem(i, buildPotion(PotionEffectType.STRENGTH, 1, 1800, 1));
+        for (int i = 22; i <= 24; i++) {
+            player.getInventory().setItem(i, buildPotion(PotionEffectType.STRENGTH, 1, 9600, 1));
         }
 
         String tierDisplay = plugin.getTierManager().getTierDisplay(tier);
@@ -191,7 +191,7 @@ public class KitManager {
     }
 
     private ItemStack buildPotion(PotionEffectType type, int amplifier, int duration, int amount) {
-        ItemStack potion = new ItemStack(Material.POTION, amount);
+        ItemStack potion = new ItemStack(Material.SPLASH_POTION, amount);
         PotionMeta meta = (PotionMeta) potion.getItemMeta();
         meta.addCustomEffect(new PotionEffect(type, duration, amplifier - 1), true);
         if (type.getColor() != null) meta.setColor(type.getColor());
