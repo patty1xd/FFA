@@ -94,7 +94,7 @@ public class ScoreboardManager {
             String teamKey = "ffa_" + player.getName().substring(0, Math.min(12, player.getName().length()));
             Team team = board.getTeam(teamKey);
             if (team == null) team = board.registerNewTeam(teamKey);
-            team.setPrefix(prefixPart + tierDisplay + " ");
+            team.setPrefix((prefixPart + tierDisplay + " ").replace("&", "§"));
             team.addEntry(player.getName());
         }
     }
