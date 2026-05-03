@@ -1,137 +1,218 @@
 package com.ffa.managers;
 
 import com.ffa.FFAPlugin;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Breeze;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.UUID;
+import java.util.Map;
 
-public class NPCManager implements Listener {
+public class KitManager {
 
     private final FFAPlugin plugin;
-    private UUID npcUUID;
-    private Location savedLocation;
-    private File npcFile;
-    private FileConfiguration npcConfig;
 
-    public NPCManager(FFAPlugin plugin) {
-        this.plugin = plugin;
-        loadNPCData();
+    public KitManager(FFAPlugin plugin) { this.plugin = plugin; }
+
+    /**
+     * Full kit — given on first join, death, or NPC right-click.
+     * Clears inventory and gives everything.
+     */
+    public void giveKit(Player player) {
+        int tier = plugin.getTierManager().getTier(player.getUniqueId());
+        String path = "tiers." + tier + ".kit.";
+
+        // Clear inventory and armor
+        player.getInventory().clear();
+
+        // Armor
+        player.getInventory().setHelmet(buildItem(path + "helmet"));
+        player.getInventory().setChestplate(buildItem(path + "chestplate"));
+        player.getInventory().setLeggings(buildItem(path + "leggings"));
+        player.getInventory().setBoots(buildItem(path + "boots"));
+
+        // Sword slot 0
+        player.getInventory().setItem(0, buildItem(path + "sword"));
+
+        // Shield offhand
+        player.getInventory().setItemInOffHand(buildShield());
+
+        // Bow — Power matches tier
+        player.getInventory().setItem(1, buildBow(tier));
+
+        // Axe — Sharpness matches tier
+        player.getInventory().setItem(2, buildAxe(tier));
+
+        // Pickaxe
+        player.getInventory().setItem(3, buildPickaxe());
+
+        // 128 golden apples
+        player.getInventory().setItem(4, new ItemStack(Material.GOLDEN_APPLE, 64));
+        player.getInventory().setItem(5, new ItemStack(Material.GOLDEN_APPLE, 64));
+
+        // 64 cobwebs
+        player.getInventory().setItem(6, new ItemStack(Material.COBWEB, 64));
+
+        // 3 fire resistance (8 min)
+        player.getInventory().setItem(7, buildPotion(PotionEffectType.FIRE_RESISTANCE, 1, 9600, 1));
+        player.getInventory().setItem(8, buildPotion(PotionEffectType.FIRE_RESISTANCE, 1, 9600, 1));
+        player.getInventory().setItem(9, buildPotion(PotionEffectType.FIRE_RESISTANCE, 1, 9600, 1));
+
+        // 3 speed (8 min)
+        player.getInventory().setItem(10, buildPotion(PotionEffectType.SPEED, 1, 9600, 1));
+        player.getInventory().setItem(11, buildPotion(PotionEffectType.SPEED, 1, 9600, 1));
+        player.getInventory().setItem(12, buildPotion(PotionEffectType.SPEED, 1, 9600, 1));
+
+        // 3 stacks exp bottles
+        player.getInventory().setItem(13, new ItemStack(Material.EXPERIENCE_BOTTLE, 64));
+        player.getInventory().setItem(14, new ItemStack(Material.EXPERIENCE_BOTTLE, 64));
+        player.getInventory().setItem(15, new ItemStack(Material.EXPERIENCE_BOTTLE, 64));
+
+        // 3 water buckets
+        player.getInventory().setItem(16, new ItemStack(Material.WATER_BUCKET));
+        player.getInventory().setItem(17, new ItemStack(Material.WATER_BUCKET));
+        player.getInventory().setItem(18, new ItemStack(Material.WATER_BUCKET));
+
+        // 64 warped logs
+        player.getInventory().setItem(19, new ItemStack(Material.WARPED_STEM, 64));
+
+        // 64 arrows
+        player.getInventory().setItem(20, new ItemStack(Material.ARROW, 64));
+
+        // 32 chorus fruit
+        player.getInventory().setItem(21, new ItemStack(Material.CHORUS_FRUIT, 32));
+
+        // 17 strength 1 potions (1m30s) — slots 18-34
+        for (int i = 22; i <= 24; i++) {
+            player.getInventory().setItem(i, buildPotion(PotionEffectType.STRENGTH, 1, 9600, 1));
+        }
+
+        String tierDisplay = plugin.getTierManager().getTierDisplay(tier);
+        player.sendMessage("§8[§6FFA§8] §aKit given! " + tierDisplay);
     }
 
-    public void spawnNPC(Location loc) {
-        // Kill any existing NPC first
-        removeNPC();
-        savedLocation = loc.clone();
+    /**
+     * Upgrade kit — called on tier up. Only updates armor enchants and sword.
+     * Preserves all other inventory items (potions, food, etc.)
+     */
+    public void upgradeKit(Player player) {
+        int tier = plugin.getTierManager().getTier(player.getUniqueId());
+        String path = "tiers." + tier + ".kit.";
 
-        String npcName = plugin.getConfig().getString("npc.name", "§6§lKit");
-        Breeze npc = (Breeze) loc.getWorld().spawnEntity(loc, EntityType.BREEZE);
-        npc.setCustomName(npcName);
-        npc.setCustomNameVisible(true);
-        npc.setAI(false);
-        npc.setInvulnerable(true);
-        npc.setSilent(true);
-        npc.setGravity(true);
-        npc.setPersistent(true);
-        npc.setRemoveWhenFarAway(false);
-        npcUUID = npc.getUniqueId();
-        saveNPCData(loc);
-    }
+        // Update armor in armor slots
+        player.getInventory().setHelmet(buildItem(path + "helmet"));
+        player.getInventory().setChestplate(buildItem(path + "chestplate"));
+        player.getInventory().setLeggings(buildItem(path + "leggings"));
+        player.getInventory().setBoots(buildItem(path + "boots"));
 
-    // Kill all breeze near saved location and clear UUID
-    public void removeNPC() {
-        if (savedLocation != null) {
-            for (Entity e : savedLocation.getWorld().getNearbyEntities(savedLocation, 3, 3, 3)) {
-                if (e instanceof Breeze b && b.getCustomName() != null
-                    && b.getCustomName().equals(plugin.getConfig().getString("npc.name", "§6§lKit"))) {
-                    e.remove();
-                }
+        // Update sword — find existing sword and replace
+        ItemStack newSword = buildItem(path + "sword");
+        boolean swordReplaced = false;
+        for (int i = 0; i < player.getInventory().getSize(); i++) {
+            ItemStack item = player.getInventory().getItem(i);
+            if (item != null && (item.getType() == Material.DIAMOND_SWORD || item.getType() == Material.NETHERITE_SWORD)) {
+                player.getInventory().setItem(i, newSword);
+                swordReplaced = true;
+                break;
             }
         }
-        if (npcUUID != null) {
-            Entity e = Bukkit.getEntity(npcUUID);
-            if (e != null && !e.isDead()) e.remove();
+        if (!swordReplaced) player.getInventory().setItem(0, newSword);
+
+        // Update bow power
+        ItemStack newBow = buildBow(tier);
+        for (int i = 0; i < player.getInventory().getSize(); i++) {
+            ItemStack item = player.getInventory().getItem(i);
+            if (item != null && item.getType() == Material.BOW) {
+                player.getInventory().setItem(i, newBow);
+                break;
+            }
         }
-        npcUUID = null;
-    }
 
-    public void restoreNPC() {
-        if (!npcConfig.contains("world")) return;
-        World world = Bukkit.getWorld(npcConfig.getString("world", "world"));
-        if (world == null) return;
-        Location loc = new Location(world,
-            npcConfig.getDouble("x"), npcConfig.getDouble("y"), npcConfig.getDouble("z"),
-            (float) npcConfig.getDouble("yaw"), 0);
-        savedLocation = loc.clone();
-        Bukkit.getScheduler().runTaskLater(plugin, () -> spawnNPC(loc), 40L);
-        // Periodic check every 60 seconds
-        Bukkit.getScheduler().runTaskTimer(plugin, this::checkAndRestore, 1200L, 1200L);
-    }
-
-    private void checkAndRestore() {
-        if (savedLocation == null) return;
-        // Check if NPC entity is still valid
-        if (npcUUID != null) {
-            Entity e = Bukkit.getEntity(npcUUID);
-            if (e != null && !e.isDead() && e.isValid()) return; // still alive
+        // Update axe sharpness
+        ItemStack newAxe = buildAxe(tier);
+        for (int i = 0; i < player.getInventory().getSize(); i++) {
+            ItemStack item = player.getInventory().getItem(i);
+            if (item != null && item.getType() == Material.DIAMOND_AXE) {
+                player.getInventory().setItem(i, newAxe);
+                break;
+            }
         }
-        plugin.getLogger().info("Kit NPC missing, respawning...");
-        spawnNPC(savedLocation);
+
+        String tierDisplay = plugin.getTierManager().getTierDisplay(tier);
+        player.sendMessage("§8[§6FFA§8] §a§lTIER UP! §7Your gear has been upgraded to " + tierDisplay + "§7!");
     }
 
-    @EventHandler
-    public void onChunkLoad(ChunkLoadEvent event) {
-        if (savedLocation == null) return;
-        if (!event.getWorld().equals(savedLocation.getWorld())) return;
-        int npcChunkX = savedLocation.getBlockX() >> 4;
-        int npcChunkZ = savedLocation.getBlockZ() >> 4;
-        if (event.getChunk().getX() == npcChunkX && event.getChunk().getZ() == npcChunkZ) {
-            Bukkit.getScheduler().runTaskLater(plugin, this::checkAndRestore, 10L);
+    // ── Builders ─────────────────────────────────────────────
+
+    private ItemStack buildShield() {
+        ItemStack shield = new ItemStack(Material.SHIELD);
+        ItemMeta m = shield.getItemMeta();
+        m.addEnchant(Enchantment.UNBREAKING, 3, true);
+        m.addEnchant(Enchantment.MENDING, 1, true);
+        shield.setItemMeta(m);
+        return shield;
+    }
+
+    private ItemStack buildBow(int tier) {
+        ItemStack bow = new ItemStack(Material.BOW);
+        ItemMeta m = bow.getItemMeta();
+        m.addEnchant(Enchantment.POWER, tier, true);
+        m.addEnchant(Enchantment.UNBREAKING, 3, true);
+        m.addEnchant(Enchantment.INFINITY, 1, true);
+        m.addEnchant(Enchantment.FLAME, 1, true);
+        bow.setItemMeta(m);
+        return bow;
+    }
+
+    private ItemStack buildAxe(int tier) {
+        ItemStack axe = new ItemStack(Material.DIAMOND_AXE);
+        ItemMeta m = axe.getItemMeta();
+        m.addEnchant(Enchantment.SHARPNESS, tier + 2, true); // T1=3, T2=4, T3=5, T4=5
+        m.addEnchant(Enchantment.EFFICIENCY, 5, true);
+        m.addEnchant(Enchantment.UNBREAKING, 3, true);
+        m.addEnchant(Enchantment.MENDING, 1, true);
+        axe.setItemMeta(m);
+        return axe;
+    }
+
+    private ItemStack buildPickaxe() {
+        ItemStack pick = new ItemStack(Material.DIAMOND_PICKAXE);
+        ItemMeta m = pick.getItemMeta();
+        m.addEnchant(Enchantment.EFFICIENCY, 5, true);
+        m.addEnchant(Enchantment.SILK_TOUCH, 1, true);
+        m.addEnchant(Enchantment.UNBREAKING, 3, true);
+        m.addEnchant(Enchantment.MENDING, 1, true);
+        pick.setItemMeta(m);
+        return pick;
+    }
+
+    private ItemStack buildPotion(PotionEffectType type, int amplifier, int duration, int amount) {
+        ItemStack potion = new ItemStack(Material.SPLASH_POTION, amount);
+        PotionMeta meta = (PotionMeta) potion.getItemMeta();
+        meta.addCustomEffect(new PotionEffect(type, duration, amplifier - 1), true);
+        if (type.getColor() != null) meta.setColor(type.getColor());
+        potion.setItemMeta(meta);
+        return potion;
+    }
+
+    public ItemStack buildItem(String path) {
+        String matName = plugin.getConfig().getString(path + ".material", "DIAMOND_SWORD");
+        Material mat;
+        try { mat = Material.valueOf(matName); } catch (IllegalArgumentException e) { mat = Material.DIAMOND_SWORD; }
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        var enchantSection = plugin.getConfig().getConfigurationSection(path + ".enchants");
+        if (enchantSection != null) {
+            for (String enchName : enchantSection.getKeys(false)) {
+                Enchantment ench = Enchantment.getByName(enchName);
+                if (ench != null) meta.addEnchant(ench, enchantSection.getInt(enchName), true);
+            }
         }
-    }
-
-    public boolean isNPC(Entity entity) {
-        if (entity == null) return false;
-        if (npcUUID != null && entity.getUniqueId().equals(npcUUID)) return true;
-        // Fallback name check
-        if (entity instanceof Breeze && entity.getCustomName() != null) {
-            String name = plugin.getConfig().getString("npc.name", "§6§lKit");
-            return entity.getCustomName().equals(name);
-        }
-        return false;
-    }
-
-    private void saveNPCData(Location loc) {
-        npcConfig.set("world", loc.getWorld().getName());
-        npcConfig.set("x", loc.getX());
-        npcConfig.set("y", loc.getY());
-        npcConfig.set("z", loc.getZ());
-        npcConfig.set("yaw", (double) loc.getYaw());
-        try { npcConfig.save(npcFile); } catch (IOException e) { e.printStackTrace(); }
-    }
-
-    private void loadNPCData() {
-        npcFile = new File(plugin.getDataFolder(), "npc.yml");
-        if (!npcFile.exists()) {
-            plugin.getDataFolder().mkdirs();
-            try { npcFile.createNewFile(); } catch (IOException e) { e.printStackTrace(); }
-        }
-        npcConfig = YamlConfiguration.loadConfiguration(npcFile);
-    }
-
-    private void clearNPCData() {
-        npcConfig.set("world", null);
-        try { npcConfig.save(npcFile); } catch (IOException e) { e.printStackTrace(); }
+        item.setItemMeta(meta);
+        return item;
     }
 }
