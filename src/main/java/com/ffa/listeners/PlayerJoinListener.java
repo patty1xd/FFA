@@ -3,6 +3,7 @@ package com.ffa.listeners;
 import com.ffa.FFAPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -24,10 +25,8 @@ public class PlayerJoinListener implements Listener {
         plugin.getBoardManager().updatePlayer(player);
         plugin.getBoardManager().updateNameTag(player);
         plugin.getNormalizationManager().normalizePlayer(player, false);
-
         String tierDisplay = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(player.getUniqueId()));
         event.setJoinMessage(null);
-
         List<String> lines = plugin.getConfig().getStringList("messages.join");
         for (String line : lines) {
             Bukkit.broadcastMessage(line
@@ -51,8 +50,10 @@ public class PlayerJoinListener implements Listener {
         event.setQuitMessage(msg);
     }
 
-    @EventHandler
+    // NORMAL priority (default) — runs after LOW priority filter has had its chance to cancel
+    @EventHandler(priority = EventPriority.NORMAL)
     public void onChat(AsyncPlayerChatEvent event) {
+        if (event.isCancelled()) return; // Respect filter cancellation
         event.setCancelled(true);
         String formatted = plugin.getChatManager().formatChat(event.getPlayer(), event.getMessage());
         event.getPlayer().getServer().broadcastMessage(formatted);
