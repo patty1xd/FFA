@@ -14,6 +14,7 @@ import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.session.ClipboardHolder;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
@@ -22,7 +23,9 @@ import org.bukkit.entity.Item;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ArenaResetManager {
 
@@ -30,6 +33,7 @@ public class ArenaResetManager {
     private File schematicFile;
     private int resetTaskId = -1;
     private int cleanupTaskId = -1;
+    private final Map<String, Material> originalBlocks = new HashMap<>();
 
     public ArenaResetManager(FFAPlugin plugin) {
         this.plugin = plugin;
@@ -80,6 +84,7 @@ public class ArenaResetManager {
                 writer.write(clipboard);
             }
             plugin.getLogger().info("Arena saved successfully to: " + schematicFile.getAbsolutePath());
+            snapshotOriginalBlocks(c1, c2);
             return true;
         } catch (Exception e) {
             plugin.getLogger().severe("saveArena error: " + e.getMessage());
@@ -223,5 +228,35 @@ public class ArenaResetManager {
         return loc.getX() >= minX && loc.getX() <= maxX
             && loc.getY() >= minY && loc.getY() <= maxY
             && loc.getZ() >= minZ && loc.getZ() <= maxZ;
+    }
+
+    private void snapshotOriginalBlocks(Location c1, Location c2) {
+        originalBlocks.clear();
+        World world = c1.getWorld();
+        int minX = Math.min(c1.getBlockX(), c2.getBlockX());
+        int maxX = Math.max(c1.getBlockX(), c2.getBlockX());
+        int minY = Math.min(c1.getBlockY(), c2.getBlockY());
+        int maxY = Math.max(c1.getBlockY(), c2.getBlockY());
+        int minZ = Math.min(c1.getBlockZ(), c2.getBlockZ());
+        int maxZ = Math.max(c1.getBlockZ(), c2.getBlockZ());
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    Material mat = world.getBlockAt(x, y, z).getType();
+                    if (mat != Material.AIR) {
+                        originalBlocks.put(x + "," + y + "," + z, mat);
+                    }
+                }
+            }
+        }
+    }
+
+    public boolean isOriginalArenaBlock(Location loc) {
+        if (!schematicFile.exists()) return false;
+        if (originalBlocks.isEmpty()) return false;
+        String key = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
+        Material saved = originalBlocks.get(key);
+        if (saved == null) return false;
+        return loc.getBlock().getType() == saved;
     }
 }
