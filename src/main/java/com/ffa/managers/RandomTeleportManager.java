@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Husk;
 import org.bukkit.entity.Player;
@@ -21,10 +22,12 @@ public class RandomTeleportManager {
     private final Random random = new Random();
     private Location corner1;
     private Location corner2;
-    private Husk npcEntity;
     private UUID npcUUID;
+    private Location npcSavedLocation;
     private File dataFile;
     private FileConfiguration dataConfig;
+
+    private static final String NPC_NAME = "§e§lRTP";
 
     public RandomTeleportManager(FFAPlugin plugin) {
         this.plugin = plugin;
@@ -53,20 +56,11 @@ public class RandomTeleportManager {
         for (int attempt = 0; attempt < 20; attempt++) {
             int x = minX + random.nextInt(maxX - minX + 1);
             int z = minZ + random.nextInt(maxZ - minZ + 1);
-
-            // Search from bottom up, find solid block with 2 air blocks above
             for (int y = minY; y <= maxY - 2; y++) {
-                org.bukkit.block.Block block = world.getBlockAt(x, y, z);
-                org.bukkit.block.Block above1 = world.getBlockAt(x, y + 1, z);
-                org.bukkit.block.Block above2 = world.getBlockAt(x, y + 2, z);
-
-                if (block.getType().isSolid()
-                    && !block.getType().name().contains("FENCE")
-                    && !block.getType().name().contains("DOOR")
-                    && !above1.getType().isSolid()
-                    && !above2.getType().isSolid()) {
-                    Location tp = new Location(world, x + 0.5, y + 1, z + 0.5, random.nextFloat() * 360, 0);
-                    player.teleport(tp);
+                if (world.getBlockAt(x, y, z).getType().isSolid()
+                    && !world.getBlockAt(x, y + 1, z).getType().isSolid()
+                    && !world.getBlockAt(x, y + 2, z).getType().isSolid()) {
+                    player.teleport(new Location(world, x + 0.5, y + 1, z + 0.5, random.nextFloat() * 360, 0));
                     return;
                 }
             }
@@ -76,16 +70,27 @@ public class RandomTeleportManager {
 
     public void spawnNPC(Location loc) {
         removeNPC();
-        npcEntity = (Husk) loc.getWorld().spawnEntity(loc, EntityType.HUSK);
-        npcEntity.setCustomName("§e§lRTP");
-        npcEntity.setCustomNameVisible(true);
-        npcEntity.setAI(false);
-        npcEntity.setInvulnerable(true);
-        npcEntity.setSilent(true);
-        npcEntity.setGravity(true);
-        npcEntity.setPersistent(true);
-        npcEntity.setRemoveWhenFarAway(false);
-        npcUUID = npcEntity.getUniqueId();
+        npcSavedLocation = loc.clone();
+
+        // Kill ALL husks with RTP name in the world to prevent duplicates
+        for (Entity e : loc.getWorld().getEntities()) {
+            if (e instanceof Husk h && NPC_NAME.equals(h.getCustomName())) {
+                e.remove();
+            }
+        }
+
+        Husk npc = (Husk) loc.getWorld().spawnEntity(loc, EntityType.HUSK);
+        npc.setCustomName(NPC_NAME);
+        npc.setCustomNameVisible(true);
+        npc.setAI(false);
+        npc.setInvulnerable(true);
+        npc.setSilent(true);
+        npc.setGravity(true);
+        npc.setPersistent(true);
+        npc.setRemoveWhenFarAway(false);
+        npc.setBaby(false); // prevent baby husk bug
+        npcUUID = npc.getUniqueId();
+
         dataConfig.set("npc.world", loc.getWorld().getName());
         dataConfig.set("npc.x", loc.getX());
         dataConfig.set("npc.y", loc.getY());
@@ -95,13 +100,23 @@ public class RandomTeleportManager {
     }
 
     public void removeNPC() {
-        if (npcEntity != null && !npcEntity.isDead()) npcEntity.remove();
-        npcEntity = null;
-        npcUUID = null;
+        if (npcUUID != null) {
+            Entity e = Bukkit.getEntity(npcUUID);
+            if (e != null) e.remove();
+            npcUUID = null;
+        }
+        // Also kill any stray RTP husks
+        if (npcSavedLocation != null) {
+            for (Entity e : npcSavedLocation.getWorld().getEntities()) {
+                if (e instanceof Husk h && NPC_NAME.equals(h.getCustomName())) e.remove();
+            }
+        }
     }
 
-    public boolean isNPC(org.bukkit.entity.Entity entity) {
-        return npcUUID != null && entity.getUniqueId().equals(npcUUID);
+    public boolean isNPC(Entity entity) {
+        if (entity == null) return false;
+        if (npcUUID != null && entity.getUniqueId().equals(npcUUID)) return true;
+        return entity instanceof Husk && NPC_NAME.equals(entity.getCustomName());
     }
 
     private void saveData() {
@@ -126,6 +141,7 @@ public class RandomTeleportManager {
             try { dataFile.createNewFile(); } catch (IOException e) { e.printStackTrace(); }
         }
         dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+
         if (dataConfig.contains("arena.world")) {
             World world = Bukkit.getWorld(dataConfig.getString("arena.world", "world"));
             if (world != null) {
@@ -133,13 +149,16 @@ public class RandomTeleportManager {
                 corner2 = new Location(world, dataConfig.getDouble("arena.x2"), dataConfig.getDouble("arena.y2"), dataConfig.getDouble("arena.z2"));
             }
         }
+
         if (dataConfig.contains("npc.world")) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 World world = Bukkit.getWorld(dataConfig.getString("npc.world", "world"));
                 if (world == null) return;
-                Location loc = new Location(world, dataConfig.getDouble("npc.x"), dataConfig.getDouble("npc.y"), dataConfig.getDouble("npc.z"), (float) dataConfig.getDouble("npc.yaw"), 0);
+                Location loc = new Location(world,
+                    dataConfig.getDouble("npc.x"), dataConfig.getDouble("npc.y"), dataConfig.getDouble("npc.z"),
+                    (float) dataConfig.getDouble("npc.yaw"), 0);
                 spawnNPC(loc);
-            }, 20L);
+            }, 40L);
         }
     }
 }
