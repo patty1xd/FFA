@@ -180,9 +180,7 @@ public class ArenaResetManager {
                     ticksLeft = intervalTicks;
                     Bukkit.broadcastMessage(plugin.getConfig().getString("arena-reset.reset-message",
                         "&c⚠ Arena is resetting!").replace("&", "§"));
-                    // Read schematic async, paste on main thread
                     Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                        // Pre-load the clipboard off main thread
                         if (!schematicFile.exists()) {
                             Bukkit.getScheduler().runTask(plugin, () ->
                                 Bukkit.broadcastMessage("§cArena reset failed! Run /savearena first."));
@@ -210,12 +208,12 @@ public class ArenaResetManager {
     public void stopResetTimer() {
         if (resetTaskId != -1) { Bukkit.getScheduler().cancelTask(resetTaskId); resetTaskId = -1; }
         if (cleanupTaskId != -1) { Bukkit.getScheduler().cancelTask(cleanupTaskId); cleanupTaskId = -1; }
+    }
 
-    // Check if a location is within the saved arena bounds
     public boolean isArenaBlock(Location loc) {
         RandomTeleportManager rtp = plugin.getRTPManager();
         if (!rtp.hasArena()) return false;
-        if (!schematicFile.exists()) return false; // only protect after /savearena
+        if (!schematicFile.exists()) return false;
         Location c1 = rtp.getCorner1();
         Location c2 = rtp.getCorner2();
         if (!loc.getWorld().equals(c1.getWorld())) return false;
@@ -225,6 +223,5 @@ public class ArenaResetManager {
         return loc.getX() >= minX && loc.getX() <= maxX
             && loc.getY() >= minY && loc.getY() <= maxY
             && loc.getZ() >= minZ && loc.getZ() <= maxZ;
-    }
     }
 }
