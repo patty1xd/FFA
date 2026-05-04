@@ -210,5 +210,21 @@ public class ArenaResetManager {
     public void stopResetTimer() {
         if (resetTaskId != -1) { Bukkit.getScheduler().cancelTask(resetTaskId); resetTaskId = -1; }
         if (cleanupTaskId != -1) { Bukkit.getScheduler().cancelTask(cleanupTaskId); cleanupTaskId = -1; }
+
+    // Check if a location is within the saved arena bounds
+    public boolean isArenaBlock(Location loc) {
+        RandomTeleportManager rtp = plugin.getRTPManager();
+        if (!rtp.hasArena()) return false;
+        if (!schematicFile.exists()) return false; // only protect after /savearena
+        Location c1 = rtp.getCorner1();
+        Location c2 = rtp.getCorner2();
+        if (!loc.getWorld().equals(c1.getWorld())) return false;
+        double minX = Math.min(c1.getX(), c2.getX()), maxX = Math.max(c1.getX(), c2.getX());
+        double minY = Math.min(c1.getY(), c2.getY()), maxY = Math.max(c1.getY(), c2.getY());
+        double minZ = Math.min(c1.getZ(), c2.getZ()), maxZ = Math.max(c1.getZ(), c2.getZ());
+        return loc.getX() >= minX && loc.getX() <= maxX
+            && loc.getY() >= minY && loc.getY() <= maxY
+            && loc.getZ() >= minZ && loc.getZ() <= maxZ;
+    }
     }
 }
