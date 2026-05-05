@@ -16,14 +16,16 @@ import org.bukkit.event.world.ChunkLoadEvent;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 public class NPCManager implements Listener {
 
     private final FFAPlugin plugin;
+    private Breeze npcEntity;
+    private UUID npcUUID;
     private Location savedLocation;
     private File npcFile;
     private FileConfiguration npcConfig;
-    private static final String NPC_NAME = "§6§lKit";
 
     public NPCManager(FFAPlugin plugin) {
         this.plugin = plugin;
@@ -31,86 +33,82 @@ public class NPCManager implements Listener {
     }
 
     public void spawnNPC(Location loc) {
+        removeNPC();
         savedLocation = loc.clone();
-        killAllKitNPCs();
-
-        Breeze npc = (Breeze) loc.getWorld().spawnEntity(loc, EntityType.BREEZE);
-        npc.setCustomName(NPC_NAME);
-        npc.setCustomNameVisible(true);
-        npc.setAI(false);
-        npc.setInvulnerable(true);
-        npc.setSilent(true);
-        npc.setGravity(false);
-        npc.setPersistent(true);
-        npc.setRemoveWhenFarAway(false);
-
+        String npcName = plugin.getConfig().getString("npc.name", "§6§lKit");
+        npcEntity = (Breeze) loc.getWorld().spawnEntity(loc, EntityType.BREEZE);
+        npcEntity.setCustomName(npcName);
+        npcEntity.setCustomNameVisible(true);
+        npcEntity.setAI(false);
+        npcEntity.setInvulnerable(true);
+        npcEntity.setSilent(true);
+        npcEntity.setGravity(true);
+        npcEntity.setPersistent(true);
+        npcEntity.setRemoveWhenFarAway(false);
+        npcUUID = npcEntity.getUniqueId();
         saveNPCData(loc);
-        plugin.getLogger().info("Kit NPC spawned at " + loc);
     }
 
-   // Check every 30 seconds
-
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-
-            if (npcSavedLocation == null) return;
-
-            boolean found = false;
-
-            for (Entity e : npcSavedLocation.getWorld().getEntities()) {
-
-                if (e instanceof Breeze && NPC_NAME.equals(e.getCustomName()) && e.isValid()) {
-
-                    found = true;
-
-                    break;
-
-                }
-
-            }
-
-            if (!found) spawnNPC(npcSavedLocation);
-
-        }, 600L, 600L);
-
-    }
-
-    private void killAllNPCs() {
-
-        for (World w : Bukkit.getWorlds()) {
-
-            for (Entity e : w.getEntities()) {
-
-                if (e instanceof Husk && NPC_NAME.equals(e.getCustomName())) {
-
-                    e.remove();
-
-                }
-
-            }
-
+    // Called periodically to check if NPC is still alive
+    public void checkAndRestoreNPC() {
+        if (savedLocation == null) return;
+        if (npcEntity == null || npcEntity.isDead() || !npcEntity.isValid()) {
+            plugin.getLogger().info("Kit NPC missing, respawning...");
+            spawnNPC(savedLocation);
         }
+    }
 
+    @EventHandler
+    public void onChunkLoad(ChunkLoadEvent event) {
+        if (savedLocation == null) return;
+        Chunk npcChunk = savedLocation.getChunk();
+        if (event.getChunk().getX() == npcChunk.getX()
+            && event.getChunk().getZ() == npcChunk.getZ()
+            && event.getWorld().equals(savedLocation.getWorld())) {
+            // Small delay so entities in chunk are loaded
+            Bukkit.getScheduler().runTaskLater(plugin, this::checkAndRestoreNPC, 5L);
+        }
     }
 
     public void removeNPC() {
-
-        killAllNPCs();
-
-        npcSavedLocation = null;
-
+        if (npcEntity != null && !npcEntity.isDead()) npcEntity.remove();
+        // Also kill any stray Breeze at saved location
+        if (savedLocation != null) {
+            for (Entity e : savedLocation.getWorld().getNearbyEntities(savedLocation, 2, 2, 2)) {
+                if (e instanceof Breeze && e.isCustomNameVisible()) e.remove();
+            }
+        }
+        npcEntity = null;
+        npcUUID = null;
+        clearNPCData();
     }
 
-    public boolean isNPC(Entity entity) {
+    public void restoreNPC() {
+        if (npcConfig == null) return;
+        String worldName = npcConfig.getString("world");
+        if (worldName == null) return;
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) return;
+        double x = npcConfig.getDouble("x");
+        double y = npcConfig.getDouble("y");
+        double z = npcConfig.getDouble("z");
+        float yaw = (float) npcConfig.getDouble("yaw");
+        Location loc = new Location(world, x, y, z, yaw, 0);
+        savedLocation = loc.clone();
+        Bukkit.getScheduler().runTaskLater(plugin, () -> spawnNPC(loc), 20L);
 
-        if (entity == null) return false;
-
-        return entity instanceof Husk && NPC_NAME.equals(entity.getCustomName());
-
+        // Periodic check every 30 seconds
+        Bukkit.getScheduler().runTaskTimer(plugin, this::checkAndRestoreNPC, 600L, 600L);
     }
 
-    public boolean isNPC(Entity entity) {
-        if (entity == null) return false;
-        return entity instanceof Breeze && NPC_NAME.equals(entity.getCustomName());
+    public boolean isNPC(org.bukkit.entity.Entity entity) {
+        if (npcUUID != null && entity.getUniqueId().equals(npcUUID)) return true;
+        // Fallback: check if it's a Breeze near saved location with custom name
+        if (savedLocation != null && entity instanceof Breeze) {
+            String name = plugin.getConfig().getString("npc.name", "§6§lKit");
+            if (name.equals(entity.getCustomName()) && entity.getLocation().distance(savedLocation) < 3) return true;
+        }
+        return false;
     }
 
     private void saveNPCData(Location loc) {
@@ -118,7 +116,7 @@ public class NPCManager implements Listener {
         npcConfig.set("x", loc.getX());
         npcConfig.set("y", loc.getY());
         npcConfig.set("z", loc.getZ());
-        npcConfig.set("yaw", (double) loc.getYaw());
+        npcConfig.set("yaw", loc.getYaw());
         try { npcConfig.save(npcFile); } catch (IOException e) { e.printStackTrace(); }
     }
 
@@ -135,4 +133,6 @@ public class NPCManager implements Listener {
         }
         npcConfig = YamlConfiguration.loadConfiguration(npcFile);
     }
+
+    public Breeze getNPCEntity() { return npcEntity; }
 }
