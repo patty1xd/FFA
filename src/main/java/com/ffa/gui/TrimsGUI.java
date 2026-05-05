@@ -7,6 +7,8 @@ import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
+import org.bukkit.block.Banner;
+import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.banner.PatternType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -22,8 +24,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.trim.ArmorTrim;
 import org.bukkit.inventory.meta.trim.TrimMaterial;
 import org.bukkit.inventory.meta.trim.TrimPattern;
-import org.bukkit.block.Banner;
-import org.bukkit.block.banner.Pattern;
 
 import java.util.*;
 
@@ -39,10 +39,11 @@ public class TrimsGUI implements Listener {
     // Draft state — committed only on SAVE
     private final Map<UUID, Map<String, TrimManager.TrimChoice>> draftTrims  = new HashMap<>();
     private final Map<UUID, TrimManager.ShieldDesign>            draftShield = new HashMap<>();
-    private final Map<UUID, String>  draftChatColor  = new HashMap<>();
-    private final Map<UUID, String>  draftSwordName  = new HashMap<>();
-    private final Map<UUID, String>  draftSwordColor = new HashMap<>();
+    private final Map<UUID, String> draftChatColor  = new HashMap<>();
+    private final Map<UUID, String> draftSwordName  = new HashMap<>();
+    private final Map<UUID, String> draftSwordColor = new HashMap<>();
 
+    // Page IDs
     private static final int PAGE_MAIN       = 0;
     private static final int PAGE_HELMET     = 1;
     private static final int PAGE_CHESTPLATE = 2;
@@ -52,7 +53,16 @@ public class TrimsGUI implements Listener {
     private static final int PAGE_CHAT_COLOR = 6;
     private static final int PAGE_SWORD_NAME = 7;
 
-    // Loaded once — Registry-based, works on 1.21
+    // GUI title prefixes — used to detect our inventories
+    private static final String TITLE_MAIN       = "§d§lDonor Customisation";
+    private static final String TITLE_HELMET     = "§bHelmet Trim";
+    private static final String TITLE_CHESTPLATE = "§bChestplate Trim";
+    private static final String TITLE_LEGGINGS   = "§bLeggings Trim";
+    private static final String TITLE_BOOTS      = "§bBoots Trim";
+    private static final String TITLE_SHIELD     = "§dShield Design";
+    private static final String TITLE_CHAT       = "§eChat Color";
+    private static final String TITLE_SWORD      = "§6Sword Name";
+
     private static final List<TrimPattern>  ALL_PATTERNS;
     private static final List<TrimMaterial> ALL_MATERIALS;
     private static final List<PatternType>  ALL_BANNER_PATTERNS;
@@ -72,28 +82,26 @@ public class TrimsGUI implements Listener {
     }
 
     private static final List<ColorOption> CHAT_COLORS = List.of(
-        new ColorOption("§aGreen",        "§a", Material.LIME_WOOL),
-        new ColorOption("§2Dark Green",   "§2", Material.GREEN_WOOL),
-        new ColorOption("§bAqua",         "§b", Material.CYAN_WOOL),
-        new ColorOption("§3Dark Aqua",    "§3", Material.LIGHT_BLUE_WOOL),
-        new ColorOption("§9Blue",         "§9", Material.BLUE_WOOL),
-        new ColorOption("§dLight Purple", "§d", Material.MAGENTA_WOOL),
-        new ColorOption("§5Dark Purple",  "§5", Material.PURPLE_WOOL),
-        new ColorOption("§6Gold",         "§6", Material.ORANGE_WOOL),
-        new ColorOption("§eYellow",       "§e", Material.YELLOW_WOOL),
-        new ColorOption("§cRed",          "§c", Material.RED_WOOL),
-        new ColorOption("§4Dark Red",     "§4", Material.BROWN_WOOL),
-        new ColorOption("§fWhite",        "§f", Material.WHITE_WOOL),
-        new ColorOption("§7Gray",         "§7", Material.LIGHT_GRAY_WOOL),
-        new ColorOption("§8Dark Gray",    "§8", Material.GRAY_WOOL),
-        new ColorOption("§0Black",        "§0", Material.BLACK_WOOL)
+        new ColorOption("Green",        "§a", Material.LIME_WOOL),
+        new ColorOption("Dark Green",   "§2", Material.GREEN_WOOL),
+        new ColorOption("Aqua",         "§b", Material.CYAN_WOOL),
+        new ColorOption("Dark Aqua",    "§3", Material.LIGHT_BLUE_WOOL),
+        new ColorOption("Blue",         "§9", Material.BLUE_WOOL),
+        new ColorOption("Light Purple", "§d", Material.MAGENTA_WOOL),
+        new ColorOption("Dark Purple",  "§5", Material.PURPLE_WOOL),
+        new ColorOption("Gold",         "§6", Material.ORANGE_WOOL),
+        new ColorOption("Yellow",       "§e", Material.YELLOW_WOOL),
+        new ColorOption("Red",          "§c", Material.RED_WOOL),
+        new ColorOption("Dark Red",     "§4", Material.BROWN_WOOL),
+        new ColorOption("White",        "§f", Material.WHITE_WOOL),
+        new ColorOption("Gray",         "§7", Material.LIGHT_GRAY_WOOL),
+        new ColorOption("Dark Gray",    "§8", Material.GRAY_WOOL),
+        new ColorOption("Black",        "§0", Material.BLACK_WOOL)
     );
 
     private record ColorOption(String label, String code, Material icon) {}
 
-    public TrimsGUI(FFAPlugin plugin) {
-        this.plugin = plugin;
-    }
+    public TrimsGUI(FFAPlugin plugin) { this.plugin = plugin; }
 
     // ── Open ─────────────────────────────────────────────────────────
 
@@ -142,11 +150,9 @@ public class TrimsGUI implements Listener {
     private Inventory buildMainMenu(Player player) {
         UUID uuid  = player.getUniqueId();
         int  saves = plugin.getRankManager().getSavesLeft(uuid);
-        Inventory inv = Bukkit.createInventory(null, 54,
-            "§d§lDonor Customisation §8| §7" + saves + " save(s) left");
+        Inventory inv = Bukkit.createInventory(null, 54, TITLE_MAIN + " §8| §7" + saves + " save(s) left");
 
-        ItemStack pane = makeItem(Material.PURPLE_STAINED_GLASS_PANE, "§0");
-        for (int i = 0; i < 54; i++) inv.setItem(i, pane);
+        fill(inv, Material.PURPLE_STAINED_GLASS_PANE);
 
         inv.setItem(10, makeItem(Material.DIAMOND_HELMET,     "§bHelmet Trim",     "§7Click to customise"));
         inv.setItem(19, makeItem(Material.DIAMOND_CHESTPLATE, "§bChestplate Trim", "§7Click to customise"));
@@ -154,18 +160,18 @@ public class TrimsGUI implements Listener {
         inv.setItem(37, makeItem(Material.DIAMOND_BOOTS,      "§bBoots Trim",      "§7Click to customise"));
         inv.setItem(13, makeItem(Material.SHIELD,             "§dShield Design",   "§7Click to customise"));
 
-        String currentChatColor = draftChatColor.getOrDefault(uuid, "§7");
+        String cc = draftChatColor.getOrDefault(uuid, "§7");
         inv.setItem(22, makeItem(Material.NAME_TAG, "§eChat Color",
-            "§7Current: " + currentChatColor + "Sample§r", "§7Click to change"));
+            "§7Current: " + cc + "Sample text§r", "§7Click to change"));
 
-        String swordN = draftSwordName.getOrDefault(uuid, "§7None");
-        String swordC = draftSwordColor.getOrDefault(uuid, "§f");
+        String sn = draftSwordName.getOrDefault(uuid, "");
+        String sc = draftSwordColor.getOrDefault(uuid, "§f");
         inv.setItem(31, makeItem(Material.DIAMOND_SWORD, "§6Sword Name",
-            "§7Current: " + swordC + swordN, "§7Click to change"));
+            "§7Current: " + sc + (sn.isBlank() ? "None" : sn), "§7Click to change"));
 
         if (saves > 0) {
             inv.setItem(49, makeItem(Material.EMERALD, "§a§lSAVE",
-                "§7Applies all changes.",
+                "§7Applies all pending changes.",
                 "§7Saves remaining: §e" + saves,
                 "§cUses 1 save charge!"));
         } else {
@@ -180,49 +186,63 @@ public class TrimsGUI implements Listener {
         int  pPage = patternPage.getOrDefault(uuid, 0);
         int  mPage = materialPage.getOrDefault(uuid, 0);
 
-        Inventory inv = Bukkit.createInventory(null, 54, "§b" + capitalize(slot) + " Trim");
-        ItemStack pane = makeItem(Material.CYAN_STAINED_GLASS_PANE, "§0");
-        for (int i = 0; i < 54; i++) inv.setItem(i, pane);
+        String title = switch (slot) {
+            case "helmet"     -> TITLE_HELMET;
+            case "chestplate" -> TITLE_CHESTPLATE;
+            case "leggings"   -> TITLE_LEGGINGS;
+            default           -> TITLE_BOOTS;
+        };
+        Inventory inv = Bukkit.createInventory(null, 54, title);
+        fill(inv, Material.CYAN_STAINED_GLASS_PANE);
 
         TrimManager.TrimChoice current = draftTrims.getOrDefault(uuid, new HashMap<>()).get(slot);
         String patName = current != null ? current.pattern().getKey().getKey()  : "None";
         String matName = current != null ? current.material().getKey().getKey() : "None";
         inv.setItem(4, makeItem(icon, "§b" + capitalize(slot),
             "§7Pattern:  §e" + patName,
-            "§7Material: §e" + matName));
+            "§7Material: §e" + matName,
+            "§7Click a pattern (top rows) or material (bottom rows)"));
 
-        // Pattern row slots 9-15
+        // ── Patterns: slots 9–15 (7 per page) ──
         int patStart = pPage * 7;
         for (int i = 0; i < 7 && (patStart + i) < ALL_PATTERNS.size(); i++) {
             TrimPattern pat = ALL_PATTERNS.get(patStart + i);
-            boolean sel = current != null && current.pattern().equals(pat);
-            ItemStack pi = new ItemStack(icon);
-            if (pi.getItemMeta() instanceof ArmorMeta meta) {
+            boolean sel     = current != null && current.pattern().equals(pat);
+            ItemStack pi    = new ItemStack(icon);
+            ItemMeta  meta  = pi.getItemMeta();
+            if (meta instanceof ArmorMeta am) {
                 TrimMaterial previewMat = current != null ? current.material()
                     : Registry.TRIM_MATERIAL.get(NamespacedKey.minecraft("gold"));
-                if (previewMat != null) meta.setTrim(new ArmorTrim(previewMat, pat));
-                meta.setDisplayName((sel ? "§a✔ " : "§7") + capitalize(pat.getKey().getKey()));
-                meta.setLore(List.of("§7Click to select"));
-                pi.setItemMeta(meta);
+                if (previewMat != null) am.setTrim(new ArmorTrim(previewMat, pat));
+                am.setDisplayName((sel ? "§a✔ " : "§7") + capitalize(pat.getKey().getKey()));
+                am.setLore(List.of("§7Click to select this pattern"));
+                pi.setItemMeta(am);
             }
             inv.setItem(9 + i, pi);
         }
-        if (pPage > 0)             inv.setItem(16, makeItem(Material.ARROW, "§7← Previous"));
-        if (patStart + 7 < ALL_PATTERNS.size()) inv.setItem(17, makeItem(Material.ARROW, "§7Next →"));
+        // Pattern nav: 16 = prev, 17 = next
+        if (pPage > 0)
+            inv.setItem(16, makeItem(Material.ARROW, "§7← Prev Patterns"));
+        if (patStart + 7 < ALL_PATTERNS.size())
+            inv.setItem(17, makeItem(Material.ARROW, "§7Next Patterns →"));
 
-        // Material row slots 27-33
+        // ── Materials: slots 27–33 (7 per page) ──
         int matStart = mPage * 7;
         for (int i = 0; i < 7 && (matStart + i) < ALL_MATERIALS.size(); i++) {
             TrimMaterial mat = ALL_MATERIALS.get(matStart + i);
-            boolean sel = current != null && current.material().equals(mat);
+            boolean sel      = current != null && current.material().equals(mat);
             inv.setItem(27 + i, makeItem(trimMaterialIcon(mat),
                 (sel ? "§a✔ " : "§e") + capitalize(mat.getKey().getKey()),
-                "§7Click to select"));
+                "§7Click to select this material"));
         }
-        if (mPage > 0)                inv.setItem(34, makeItem(Material.ARROW, "§7← Previous"));
-        if (matStart + 7 < ALL_MATERIALS.size()) inv.setItem(35, makeItem(Material.ARROW, "§7Next →"));
+        // Material nav: 34 = prev, 35 = next
+        if (mPage > 0)
+            inv.setItem(34, makeItem(Material.ARROW, "§7← Prev Materials"));
+        if (matStart + 7 < ALL_MATERIALS.size())
+            inv.setItem(35, makeItem(Material.ARROW, "§7Next Materials →"));
 
-        inv.setItem(45, makeItem(Material.BARRIER, "§cBack"));
+        // Back: slot 45
+        inv.setItem(45, makeItem(Material.BARRIER, "§cBack to Menu"));
         return inv;
     }
 
@@ -230,82 +250,88 @@ public class TrimsGUI implements Listener {
         UUID uuid = player.getUniqueId();
         TrimManager.ShieldDesign draft = draftShield.get(uuid);
 
-        Inventory inv = Bukkit.createInventory(null, 54, "§dShield Design");
-        ItemStack pane = makeItem(Material.MAGENTA_STAINED_GLASS_PANE, "§0");
-        for (int i = 0; i < 54; i++) inv.setItem(i, pane);
+        Inventory inv = Bukkit.createInventory(null, 54, TITLE_SHIELD);
+        fill(inv, Material.MAGENTA_STAINED_GLASS_PANE);
 
-        String baseC = draft != null ? draft.baseColor().name()    : "WHITE";
-        String patT  = draft != null ? draft.patternType().getKey().getKey() : "None";
-        String patC  = draft != null ? draft.patternColor().name() : "WHITE";
+        String baseC = draft != null ? draft.baseColor().name()            : "WHITE";
+        String patT  = draft != null ? draft.patternType().getKey().getKey(): "none";
+        String patC  = draft != null ? draft.patternColor().name()         : "WHITE";
         inv.setItem(4, makeItem(Material.SHIELD, "§dShield Design",
-            "§7Base: §f" + baseC, "§7Pattern: §f" + patT, "§7Pattern Color: §f" + patC));
+            "§7Base color:     §f" + baseC,
+            "§7Pattern type:   §f" + patT,
+            "§7Pattern color:  §f" + patC));
 
-        // Base colors — row 1 (slots 9-24)
         DyeColor[] dyes = DyeColor.values();
+
+        // Base colors: slots 9–24
         for (int i = 0; i < Math.min(16, dyes.length); i++) {
-            DyeColor dye = dyes[i];
-            boolean sel  = draft != null && draft.baseColor() == dye;
-            inv.setItem(9 + i, makeItem(dyeToWool(dye),
-                (sel ? "§a✔ " : "§7") + "Base: " + dye.name(), "§7Click to set base color"));
+            boolean sel = draft != null && draft.baseColor() == dyes[i];
+            inv.setItem(9 + i, makeItem(dyeToWool(dyes[i]),
+                (sel ? "§a✔ " : "§7") + "Base: " + dyes[i].name(),
+                "§7Click to set base color"));
         }
 
-        // Pattern types — row 3 (slots 27-35), up to 9 patterns
+        // Pattern types: slots 27–35 (up to 9)
         for (int i = 0; i < Math.min(9, ALL_BANNER_PATTERNS.size()); i++) {
             PatternType pt = ALL_BANNER_PATTERNS.get(i);
             boolean sel    = draft != null && draft.patternType().equals(pt);
             inv.setItem(27 + i, makeItem(Material.PAPER,
-                (sel ? "§a✔ " : "§d") + pt.getKey().getKey(), "§7Click to set pattern"));
+                (sel ? "§a✔ " : "§d") + pt.getKey().getKey(),
+                "§7Click to set pattern type"));
         }
 
-        // Pattern colors — row 4 (slots 36-51)
+        // Pattern colors: slots 36–51
         for (int i = 0; i < Math.min(16, dyes.length); i++) {
-            DyeColor dye = dyes[i];
-            boolean sel  = draft != null && draft.patternColor() == dye;
-            inv.setItem(36 + i, makeItem(dyeToWool(dye),
-                (sel ? "§a✔ " : "§7") + "Pattern Color: " + dye.name(), "§7Click to set"));
+            boolean sel = draft != null && draft.patternColor() == dyes[i];
+            inv.setItem(36 + i, makeItem(dyeToWool(dyes[i]),
+                (sel ? "§a✔ " : "§7") + "Pattern Color: " + dyes[i].name(),
+                "§7Click to set pattern color"));
         }
 
-        inv.setItem(45, makeItem(Material.BARRIER, "§cBack"));
+        inv.setItem(45, makeItem(Material.BARRIER, "§cBack to Menu"));
         return inv;
     }
 
     private Inventory buildChatColorPage(Player player) {
         UUID uuid    = player.getUniqueId();
         String current = draftChatColor.getOrDefault(uuid, "");
-        Inventory inv  = Bukkit.createInventory(null, 36, "§eChat Color");
-        ItemStack pane = makeItem(Material.YELLOW_STAINED_GLASS_PANE, "§0");
-        for (int i = 0; i < 36; i++) inv.setItem(i, pane);
+        Inventory inv  = Bukkit.createInventory(null, 36, TITLE_CHAT);
+        fill(inv, Material.YELLOW_STAINED_GLASS_PANE);
         for (int i = 0; i < CHAT_COLORS.size(); i++) {
             ColorOption opt = CHAT_COLORS.get(i);
             boolean sel     = opt.code().equals(current);
             inv.setItem(10 + i, makeItem(opt.icon(),
-                (sel ? "§a✔ " : "") + opt.label(), "§7Click to select"));
+                (sel ? "§a✔ " : opt.code()) + opt.label(),
+                "§7Click to select this chat color"));
         }
-        inv.setItem(31, makeItem(Material.BARRIER, "§cBack"));
+        inv.setItem(31, makeItem(Material.BARRIER, "§cBack to Menu"));
         return inv;
     }
 
     private Inventory buildSwordNamePage(Player player) {
-        UUID uuid         = player.getUniqueId();
-        String currentName  = draftSwordName.getOrDefault(uuid, "");
-        String currentColor = draftSwordColor.getOrDefault(uuid, "§f");
-        Inventory inv = Bukkit.createInventory(null, 36, "§6Sword Name");
-        ItemStack pane = makeItem(Material.ORANGE_STAINED_GLASS_PANE, "§0");
-        for (int i = 0; i < 36; i++) inv.setItem(i, pane);
+        UUID uuid        = player.getUniqueId();
+        String curName   = draftSwordName.getOrDefault(uuid, "");
+        String curColor  = draftSwordColor.getOrDefault(uuid, "§f");
+        Inventory inv    = Bukkit.createInventory(null, 36, TITLE_SWORD);
+        fill(inv, Material.ORANGE_STAINED_GLASS_PANE);
+
         inv.setItem(4, makeItem(Material.DIAMOND_SWORD, "§6Current Sword Name",
-            "§7Name: " + currentColor + (currentName.isBlank() ? "None" : currentName),
-            "§7(Max 20 characters)"));
+            "§7Name: " + curColor + (curName.isBlank() ? "None" : curName),
+            "§7Max 20 characters"));
         inv.setItem(11, makeItem(Material.WRITABLE_BOOK, "§eSet Name",
-            "§7Click then type your sword name in chat."));
+            "§7Click, then type your sword name in chat.",
+            "§7Type §ccancel §7to abort."));
         inv.setItem(15, makeItem(Material.BARRIER, "§cClear Name",
             "§7Removes the custom sword name."));
+
         for (int i = 0; i < CHAT_COLORS.size(); i++) {
             ColorOption opt = CHAT_COLORS.get(i);
-            boolean sel     = opt.code().equals(currentColor);
+            boolean sel     = opt.code().equals(curColor);
             inv.setItem(18 + i, makeItem(opt.icon(),
-                (sel ? "§a✔ " : "") + opt.label(), "§7Click to set name color"));
+                (sel ? "§a✔ " : opt.code()) + opt.label(),
+                "§7Click to set name color"));
         }
-        inv.setItem(31, makeItem(Material.BARRIER, "§cBack"));
+        inv.setItem(31, makeItem(Material.BARRIER, "§cBack to Menu"));
         return inv;
     }
 
@@ -314,30 +340,53 @@ public class TrimsGUI implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        UUID uuid = player.getUniqueId();
-        if (!pageMap.containsKey(uuid)) return;
+
+        // Cancel ALL clicks in any of our GUIs — title-based detection
+        String title = event.getView().getTitle();
+        boolean isOurs = title.startsWith(TITLE_MAIN)
+            || title.equals(TITLE_HELMET) || title.equals(TITLE_CHESTPLATE)
+            || title.equals(TITLE_LEGGINGS) || title.equals(TITLE_BOOTS)
+            || title.equals(TITLE_SHIELD)   || title.equals(TITLE_CHAT)
+            || title.equals(TITLE_SWORD);
+        if (!isOurs) return;
+
+        // Always cancel — prevents item pickup in ALL circumstances
         event.setCancelled(true);
 
+        // Ignore clicks outside the top inventory (e.g. player's own inv)
+        if (event.getClickedInventory() == null) return;
+        if (!event.getClickedInventory().equals(event.getView().getTopInventory())) return;
+
+        UUID uuid = player.getUniqueId();
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
-        String name = clicked.hasItemMeta() && clicked.getItemMeta().hasDisplayName()
-            ? clicked.getItemMeta().getDisplayName() : "";
 
-        int page = pageMap.get(uuid);
-        switch (page) {
-            case PAGE_MAIN       -> handleMain(player, uuid, name);
-            case PAGE_HELMET     -> handleArmorPage(player, uuid, "helmet",     name, event.getSlot());
-            case PAGE_CHESTPLATE -> handleArmorPage(player, uuid, "chestplate", name, event.getSlot());
-            case PAGE_LEGGINGS   -> handleArmorPage(player, uuid, "leggings",   name, event.getSlot());
-            case PAGE_BOOTS      -> handleArmorPage(player, uuid, "boots",      name, event.getSlot());
-            case PAGE_SHIELD     -> handleShieldPage(player, uuid, name, event.getSlot());
-            case PAGE_CHAT_COLOR -> handleChatColorPage(player, uuid, name);
-            case PAGE_SWORD_NAME -> handleSwordNamePage(player, uuid, name);
+        // Route by title
+        if (title.startsWith(TITLE_MAIN)) {
+            handleMain(player, uuid, clicked);
+        } else if (title.equals(TITLE_HELMET)) {
+            handleArmorPage(player, uuid, "helmet", clicked, event.getSlot());
+        } else if (title.equals(TITLE_CHESTPLATE)) {
+            handleArmorPage(player, uuid, "chestplate", clicked, event.getSlot());
+        } else if (title.equals(TITLE_LEGGINGS)) {
+            handleArmorPage(player, uuid, "leggings", clicked, event.getSlot());
+        } else if (title.equals(TITLE_BOOTS)) {
+            handleArmorPage(player, uuid, "boots", clicked, event.getSlot());
+        } else if (title.equals(TITLE_SHIELD)) {
+            handleShieldPage(player, uuid, clicked, event.getSlot());
+        } else if (title.equals(TITLE_CHAT)) {
+            handleChatColorPage(player, uuid, clicked);
+        } else if (title.equals(TITLE_SWORD)) {
+            handleSwordNamePage(player, uuid, clicked);
         }
     }
 
-    private void handleMain(Player player, UUID uuid, String name) {
-        switch (stripColor(name)) {
+    // ── Handlers ─────────────────────────────────────────────────────
+
+    private void handleMain(Player player, UUID uuid, ItemStack clicked) {
+        Material mat = clicked.getType();
+        String   name = stripColor(displayName(clicked));
+        switch (name) {
             case "Helmet Trim"     -> { patternPage.put(uuid,0); materialPage.put(uuid,0); openPage(player, PAGE_HELMET);     }
             case "Chestplate Trim" -> { patternPage.put(uuid,0); materialPage.put(uuid,0); openPage(player, PAGE_CHESTPLATE); }
             case "Leggings Trim"   -> { patternPage.put(uuid,0); materialPage.put(uuid,0); openPage(player, PAGE_LEGGINGS);   }
@@ -349,14 +398,20 @@ public class TrimsGUI implements Listener {
         }
     }
 
-    private void handleArmorPage(Player player, UUID uuid, String slot, String name, int slotIndex) {
-        switch (stripColor(name)) {
-            case "Back"        -> { patternPage.remove(uuid); materialPage.remove(uuid); openPage(player, PAGE_MAIN); return; }
-            case "← Previous" -> { if (slotIndex < 20) patternPage.merge(uuid,-1,Integer::sum); else materialPage.merge(uuid,-1,Integer::sum); openPage(player, pageMap.get(uuid)); return; }
-            case "Next →"      -> { if (slotIndex < 20) patternPage.merge(uuid, 1,Integer::sum); else materialPage.merge(uuid, 1,Integer::sum); openPage(player, pageMap.get(uuid)); return; }
-        }
+    private void handleArmorPage(Player player, UUID uuid, String slot, ItemStack clicked, int slotIndex) {
+        String name = stripColor(displayName(clicked));
 
-        // Pattern selection — slots 9-15
+        // Navigation buttons
+        if (name.equals("Back to Menu")) {
+            patternPage.remove(uuid); materialPage.remove(uuid);
+            openPage(player, PAGE_MAIN); return;
+        }
+        if (name.equals("← Prev Patterns")) { patternPage.merge(uuid, -1, Integer::sum); openPage(player, pageForSlot(slot)); return; }
+        if (name.equals("Next Patterns →"))  { patternPage.merge(uuid,  1, Integer::sum); openPage(player, pageForSlot(slot)); return; }
+        if (name.equals("← Prev Materials")) { materialPage.merge(uuid, -1, Integer::sum); openPage(player, pageForSlot(slot)); return; }
+        if (name.equals("Next Materials →"))  { materialPage.merge(uuid,  1, Integer::sum); openPage(player, pageForSlot(slot)); return; }
+
+        // Pattern selection: slots 9–15
         if (slotIndex >= 9 && slotIndex <= 15) {
             int idx = patternPage.getOrDefault(uuid, 0) * 7 + (slotIndex - 9);
             if (idx < ALL_PATTERNS.size()) {
@@ -366,12 +421,12 @@ public class TrimsGUI implements Listener {
                     : Registry.TRIM_MATERIAL.get(NamespacedKey.minecraft("gold"));
                 draftTrims.computeIfAbsent(uuid, k -> new HashMap<>())
                           .put(slot, new TrimManager.TrimChoice(pat, mat));
-                openPage(player, pageMap.get(uuid));
+                openPage(player, pageForSlot(slot));
             }
             return;
         }
 
-        // Material selection — slots 27-33
+        // Material selection: slots 27–33
         if (slotIndex >= 27 && slotIndex <= 33) {
             int idx = materialPage.getOrDefault(uuid, 0) * 7 + (slotIndex - 27);
             if (idx < ALL_MATERIALS.size()) {
@@ -381,21 +436,22 @@ public class TrimsGUI implements Listener {
                     : Registry.TRIM_PATTERN.get(NamespacedKey.minecraft("sentry"));
                 draftTrims.computeIfAbsent(uuid, k -> new HashMap<>())
                           .put(slot, new TrimManager.TrimChoice(pat, mat));
-                openPage(player, pageMap.get(uuid));
+                openPage(player, pageForSlot(slot));
             }
         }
     }
 
-    private void handleShieldPage(Player player, UUID uuid, String name, int slotIndex) {
-        if (stripColor(name).equals("Back")) { openPage(player, PAGE_MAIN); return; }
+    private void handleShieldPage(Player player, UUID uuid, ItemStack clicked, int slotIndex) {
+        String name = stripColor(displayName(clicked));
+        if (name.equals("Back to Menu")) { openPage(player, PAGE_MAIN); return; }
 
         TrimManager.ShieldDesign cur = draftShield.get(uuid);
         DyeColor    baseColor = cur != null ? cur.baseColor()    : DyeColor.WHITE;
         PatternType patType   = cur != null ? cur.patternType()  : ALL_BANNER_PATTERNS.get(0);
         DyeColor    patColor  = cur != null ? cur.patternColor() : DyeColor.BLACK;
+        DyeColor[]  dyes      = DyeColor.values();
 
-        DyeColor[] dyes = DyeColor.values();
-
+        // Base color: slots 9–24
         if (slotIndex >= 9 && slotIndex <= 24) {
             int idx = slotIndex - 9;
             if (idx < dyes.length) {
@@ -404,6 +460,7 @@ public class TrimsGUI implements Listener {
             }
             return;
         }
+        // Pattern type: slots 27–35
         if (slotIndex >= 27 && slotIndex <= 35) {
             int idx = slotIndex - 27;
             if (idx < ALL_BANNER_PATTERNS.size()) {
@@ -412,6 +469,7 @@ public class TrimsGUI implements Listener {
             }
             return;
         }
+        // Pattern color: slots 36–51
         if (slotIndex >= 36 && slotIndex <= 51) {
             int idx = slotIndex - 36;
             if (idx < dyes.length) {
@@ -421,31 +479,34 @@ public class TrimsGUI implements Listener {
         }
     }
 
-    private void handleChatColorPage(Player player, UUID uuid, String name) {
-        if (stripColor(name).equals("Back")) { openPage(player, PAGE_MAIN); return; }
+    private void handleChatColorPage(Player player, UUID uuid, ItemStack clicked) {
+        String name = stripColor(displayName(clicked));
+        if (name.equals("Back to Menu")) { openPage(player, PAGE_MAIN); return; }
         for (ColorOption opt : CHAT_COLORS) {
-            if (stripColor(opt.label()).equals(stripColor(name))) {
+            if (opt.label().equals(name)) {
                 draftChatColor.put(uuid, opt.code());
-                player.sendMessage("§8[§6FFA§8] §7Preview: " + opt.code() + "This is how your chat will look!");
+                player.sendMessage("§8[§6FFA§8] §7Chat color preview: " + opt.code() + "This is what your messages will look like!");
                 openPage(player, PAGE_CHAT_COLOR);
                 return;
             }
         }
     }
 
-    private void handleSwordNamePage(Player player, UUID uuid, String name) {
-        switch (stripColor(name)) {
-            case "Back"       -> { openPage(player, PAGE_MAIN); return; }
-            case "Clear Name" -> { draftSwordName.put(uuid, ""); openPage(player, PAGE_SWORD_NAME); return; }
-            case "Set Name"   -> {
+    private void handleSwordNamePage(Player player, UUID uuid, ItemStack clicked) {
+        String name = stripColor(displayName(clicked));
+        switch (name) {
+            case "Back to Menu" -> { openPage(player, PAGE_MAIN); return; }
+            case "Clear Name"   -> { draftSwordName.put(uuid, ""); openPage(player, PAGE_SWORD_NAME); return; }
+            case "Set Name"     -> {
                 player.closeInventory();
                 awaitingName.add(uuid);
                 player.sendMessage("§8[§6FFA§8] §eType your sword name in chat §7(max 20 chars). Type §ccancel §7to abort.");
                 return;
             }
         }
+        // Color selection
         for (ColorOption opt : CHAT_COLORS) {
-            if (stripColor(opt.label()).equals(stripColor(name))) {
+            if (opt.label().equals(name)) {
                 draftSwordColor.put(uuid, opt.code());
                 openPage(player, PAGE_SWORD_NAME);
                 return;
@@ -453,7 +514,7 @@ public class TrimsGUI implements Listener {
         }
     }
 
-    // ── Chat input ───────────────────────────────────────────────────
+    // ── Chat input for sword name ─────────────────────────────────────
 
     @EventHandler
     public void onChat(AsyncPlayerChatEvent event) {
@@ -474,7 +535,7 @@ public class TrimsGUI implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> openPage(player, PAGE_SWORD_NAME));
     }
 
-    // ── Save ─────────────────────────────────────────────────────────
+    // ── Save ──────────────────────────────────────────────────────────
 
     private void handleSave(Player player, UUID uuid) {
         if (plugin.getRankManager().getSavesLeft(uuid) <= 0) {
@@ -498,11 +559,11 @@ public class TrimsGUI implements Listener {
         if (cc != null) plugin.getRankManager().setChatColor(uuid, cc);
 
         // Commit sword name
-        String sn = draftSwordName.getOrDefault(uuid, "");
-        String sc = draftSwordColor.getOrDefault(uuid, "§f");
-        plugin.getRankManager().setSwordName(uuid, sn, sc);
+        plugin.getRankManager().setSwordName(uuid,
+            draftSwordName.getOrDefault(uuid, ""),
+            draftSwordColor.getOrDefault(uuid, "§f"));
 
-        // Apply immediately
+        // Apply immediately to current gear
         plugin.getTrimManager().applyTrims(player);
         plugin.getKitManager().applyCustomSwordName(player);
         plugin.getRankManager().save();
@@ -512,7 +573,7 @@ public class TrimsGUI implements Listener {
         openPage(player, PAGE_MAIN);
     }
 
-    // ── Close cleanup ────────────────────────────────────────────────
+    // ── Close cleanup ─────────────────────────────────────────────────
 
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
@@ -523,7 +584,34 @@ public class TrimsGUI implements Listener {
         materialPage.remove(uuid);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────
+
+    private int pageForSlot(String slot) {
+        return switch (slot) {
+            case "helmet"     -> PAGE_HELMET;
+            case "chestplate" -> PAGE_CHESTPLATE;
+            case "leggings"   -> PAGE_LEGGINGS;
+            default           -> PAGE_BOOTS;
+        };
+    }
+
+    /** Gets raw display name from item, or empty string if none. */
+    private String displayName(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return "";
+        ItemMeta meta = item.getItemMeta();
+        return meta.hasDisplayName() ? meta.getDisplayName() : "";
+    }
+
+    /** Strips all § color codes and the checkmark prefix. */
+    private String stripColor(String s) {
+        if (s == null) return "";
+        return s.replaceAll("§.", "").replace("✔ ", "").trim();
+    }
+
+    private void fill(Inventory inv, Material mat) {
+        ItemStack pane = makeItem(mat, "§0");
+        for (int i = 0; i < inv.getSize(); i++) inv.setItem(i, pane);
+    }
 
     private ItemStack makeItem(Material mat, String name, String... lore) {
         ItemStack item = new ItemStack(mat);
@@ -536,12 +624,7 @@ public class TrimsGUI implements Listener {
 
     private String capitalize(String s) {
         if (s == null || s.isEmpty()) return s;
-        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
-    }
-
-    private String stripColor(String s) {
-        if (s == null) return "";
-        return s.replaceAll("§.", "").replace("✔ ", "");
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1).replace("_", " ");
     }
 
     private Material dyeToWool(DyeColor dye) {
@@ -577,7 +660,8 @@ public class TrimsGUI implements Listener {
             case "EMERALD"   -> Material.EMERALD;
             case "LAPIS"     -> Material.LAPIS_LAZULI;
             case "QUARTZ"    -> Material.QUARTZ;
-            default          -> Material.GOLD_INGOT;
+            case "RESIN"     -> Material.RESIN_BRICK;
+            default          -> Material.RESIN_BRICK;
         };
     }
 }
