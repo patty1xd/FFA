@@ -14,7 +14,6 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
-import java.util.UUID;
 
 public class RandomTeleportManager {
 
@@ -22,11 +21,9 @@ public class RandomTeleportManager {
     private final Random random = new Random();
     private Location corner1;
     private Location corner2;
-    private UUID npcUUID;
     private Location npcSavedLocation;
     private File dataFile;
     private FileConfiguration dataConfig;
-
     private static final String NPC_NAME = "§e§lRTP";
 
     public RandomTeleportManager(FFAPlugin plugin) {
@@ -41,10 +38,7 @@ public class RandomTeleportManager {
     public Location getCorner2() { return corner2; }
 
     public void teleportRandom(Player player) {
-        if (!hasArena()) {
-            player.sendMessage("§cArena not set! Use §f/setarena1 §cand §f/setarena2 §cfirst.");
-            return;
-        }
+        if (!hasArena()) { player.sendMessage("§cArena not set!"); return; }
         int minX = Math.min(corner1.getBlockX(), corner2.getBlockX());
         int maxX = Math.max(corner1.getBlockX(), corner2.getBlockX());
         int minZ = Math.min(corner1.getBlockZ(), corner2.getBlockZ());
@@ -69,15 +63,8 @@ public class RandomTeleportManager {
     }
 
     public void spawnNPC(Location loc) {
-        removeNPC();
         npcSavedLocation = loc.clone();
-
-        // Kill ALL husks with RTP name in the world to prevent duplicates
-        for (Entity e : loc.getWorld().getEntities()) {
-            if (e instanceof Husk h && NPC_NAME.equals(h.getCustomName())) {
-                e.remove();
-            }
-        }
+        killAllRTPNPCs();
 
         Husk npc = (Husk) loc.getWorld().spawnEntity(loc, EntityType.HUSK);
         npc.setCustomName(NPC_NAME);
@@ -85,11 +72,10 @@ public class RandomTeleportManager {
         npc.setAI(false);
         npc.setInvulnerable(true);
         npc.setSilent(true);
-        npc.setGravity(true);
+        npc.setGravity(false);
         npc.setPersistent(true);
         npc.setRemoveWhenFarAway(false);
-        npc.setBaby(false); // prevent baby husk bug
-        npcUUID = npc.getUniqueId();
+        npc.setBaby(false);
 
         dataConfig.set("npc.world", loc.getWorld().getName());
         dataConfig.set("npc.x", loc.getX());
@@ -97,25 +83,38 @@ public class RandomTeleportManager {
         dataConfig.set("npc.z", loc.getZ());
         dataConfig.set("npc.yaw", (double) loc.getYaw());
         saveData();
+
+        // Check every 30 seconds
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (npcSavedLocation == null) return;
+            boolean found = false;
+            for (Entity e : npcSavedLocation.getWorld().getEntities()) {
+                if (e instanceof Husk && NPC_NAME.equals(e.getCustomName()) && e.isValid()) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) spawnNPC(npcSavedLocation);
+        }, 600L, 600L);
     }
 
-    public void removeNPC() {
-        if (npcUUID != null) {
-            Entity e = Bukkit.getEntity(npcUUID);
-            if (e != null) e.remove();
-            npcUUID = null;
-        }
-        // Also kill any stray RTP husks
-        if (npcSavedLocation != null) {
-            for (Entity e : npcSavedLocation.getWorld().getEntities()) {
-                if (e instanceof Husk h && NPC_NAME.equals(h.getCustomName())) e.remove();
+    private void killAllRTPNPCs() {
+        for (World w : Bukkit.getWorlds()) {
+            for (Entity e : w.getEntities()) {
+                if (e instanceof Husk && NPC_NAME.equals(e.getCustomName())) {
+                    e.remove();
+                }
             }
         }
     }
 
+    public void removeNPC() {
+        killAllRTPNPCs();
+        npcSavedLocation = null;
+    }
+
     public boolean isNPC(Entity entity) {
         if (entity == null) return false;
-        if (npcUUID != null && entity.getUniqueId().equals(npcUUID)) return true;
         return entity instanceof Husk && NPC_NAME.equals(entity.getCustomName());
     }
 
