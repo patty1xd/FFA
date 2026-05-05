@@ -3,7 +3,7 @@ version: 1.0.0
 main: com.ffa.FFAPlugin
 api-version: '1.21'
 softdepend: [PlaceholderAPI]
-description: KoalaFFA - FFA Kit plugin with tier system
+description: KoalaFFA - FFA Kit plugin with tier system and donor ranks
 authors: [KoalaFFA]
 
 commands:
@@ -71,19 +71,34 @@ commands:
   savearena:
     description: Saves the arena
     usage: /savearena
+    permission: ffa.admin
   resetarena:
     description: Resets the arena
     usage: /resetarena
+    permission: ffa.admin
+
+  # ── Rank system ──────────────────────────────────────────────────
+  grantrank:
+    description: Grant the donor rank to a player
+    usage: /grantrank <player> <days>
+    permission: ffa.admin
+  revokerank:
+    description: Revoke the donor rank from a player
+    usage: /revokerank <player>
+    permission: ffa.admin
+  trims:
+    description: Open the donor customisation GUI
+    usage: /trims
+  spawnranknpc:
+    description: Spawn the RANKS witch NPC
+    usage: /spawnranknpc
+    permission: ffa.admin
+  removeranknpc:
+    description: Remove the RANKS witch NPC
+    usage: /removeranknpc
+    permission: ffa.admin
 
 permissions:
   ffa.admin:
-    description: Admin access
+    description: Full admin access to KoalaFFA
     default: op
-  savearena:
-    description: Save the arena schematic for auto-reset
-    usage: /savearena
-    permission: ffa.admin
-  resetarena:
-    description: Manually reset the arena now
-    usage: /resetarena
-    permission: ffa.admin
