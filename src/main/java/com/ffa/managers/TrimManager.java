@@ -2,6 +2,8 @@ package com.ffa.managers;
 
 import com.ffa.FFAPlugin;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ArmorMeta;
@@ -17,52 +19,29 @@ import org.bukkit.DyeColor;
 
 import java.util.*;
 
-/**
- * TrimManager
- * Handles applying and stripping armor trims and shield designs.
- *
- * Each player can have independent trim choices per armor slot
- * and a separate shield banner pattern + color.
- *
- * Storage is kept in memory and persisted via RankManager's save.
- * The RankManager stores the raw string keys; this class converts them.
- */
 public class TrimManager {
 
     private final FFAPlugin plugin;
 
-    // UUID -> per-slot trim choices  (slot: "helmet","chestplate","leggings","boots")
-    private final Map<UUID, Map<String, TrimChoice>> trimChoices = new HashMap<>();
-
-    // UUID -> shield design
-    private final Map<UUID, ShieldDesign> shieldDesigns = new HashMap<>();
+    private final Map<UUID, Map<String, TrimChoice>> trimChoices  = new HashMap<>();
+    private final Map<UUID, ShieldDesign>            shieldDesigns = new HashMap<>();
 
     public TrimManager(FFAPlugin plugin) {
         this.plugin = plugin;
     }
 
-    // ── Data classes ────────────────────────────────────────────────
-
     public record TrimChoice(TrimPattern pattern, TrimMaterial material) {}
-
     public record ShieldDesign(PatternType patternType, DyeColor patternColor, DyeColor baseColor) {}
 
-    // ── Apply trims to a living player's current armor ──────────────
+    // ── Apply trims ──────────────────────────────────────────────────
 
-    /**
-     * Applies the stored trims onto the player's currently equipped armor.
-     * Called after giveKit() so the base item already exists.
-     * No-op if the player has no rank.
-     */
     public void applyTrims(Player player) {
         if (!plugin.getRankManager().hasRank(player.getUniqueId())) return;
         UUID uuid = player.getUniqueId();
-
         applyTrimToSlot(player, uuid, "helmet",     player.getInventory().getHelmet());
         applyTrimToSlot(player, uuid, "chestplate", player.getInventory().getChestplate());
         applyTrimToSlot(player, uuid, "leggings",   player.getInventory().getLeggings());
         applyTrimToSlot(player, uuid, "boots",      player.getInventory().getBoots());
-
         applyShieldDesign(player, uuid);
     }
 
@@ -96,12 +75,8 @@ public class TrimManager {
         player.getInventory().setItemInOffHand(shield);
     }
 
-    // ── Strip trims from an ItemStack (for normalization) ───────────
+    // ── Strip trims ──────────────────────────────────────────────────
 
-    /**
-     * Returns a copy of the item with all trims removed, or null if no trim was present.
-     * Used by NormalizationManager when a non-rank-holder picks up trimmed armor.
-     */
     public ItemStack stripTrims(ItemStack item) {
         if (item == null) return null;
         ItemMeta meta = item.getItemMeta();
@@ -113,19 +88,15 @@ public class TrimManager {
         return stripped;
     }
 
-    /**
-     * Returns a plain shield (no banner) if the given item is a shield with banner data.
-     */
     public ItemStack stripShieldDesign(ItemStack item) {
         if (item == null || item.getType() != Material.SHIELD) return null;
         if (!(item.getItemMeta() instanceof BlockStateMeta meta)) return null;
         if (!(meta.getBlockState() instanceof Banner banner)) return null;
         if (banner.getPatterns().isEmpty() && banner.getBaseColor() == DyeColor.WHITE) return null;
-        // Return plain shield
         return new ItemStack(Material.SHIELD);
     }
 
-    // ── Trim choice storage ─────────────────────────────────────────
+    // ── Storage ──────────────────────────────────────────────────────
 
     public void setTrimChoice(UUID uuid, String slot, TrimPattern pattern, TrimMaterial material) {
         trimChoices.computeIfAbsent(uuid, k -> new HashMap<>())
@@ -141,8 +112,6 @@ public class TrimManager {
         return trimChoices.getOrDefault(uuid, new HashMap<>());
     }
 
-    // ── Shield design storage ───────────────────────────────────────
-
     public void setShieldDesign(UUID uuid, PatternType patternType, DyeColor patternColor, DyeColor baseColor) {
         shieldDesigns.put(uuid, new ShieldDesign(patternType, patternColor, baseColor));
     }
@@ -151,21 +120,20 @@ public class TrimManager {
         return shieldDesigns.get(uuid);
     }
 
-    // ── Persistence helpers (called by RankManager) ─────────────────
+    // ── Persistence ──────────────────────────────────────────────────
 
-    /** Serialize trim choices to a string map for YAML storage. */
     public Map<String, String> serializeTrimChoices(UUID uuid) {
         Map<String, String> result = new HashMap<>();
         Map<String, TrimChoice> choices = trimChoices.get(uuid);
         if (choices == null) return result;
         for (Map.Entry<String, TrimChoice> e : choices.entrySet()) {
-            result.put(e.getKey(), e.getValue().pattern().getKey().getKey()
-                    + ":" + e.getValue().material().getKey().getKey());
+            result.put(e.getKey(),
+                e.getValue().pattern().getKey().getKey()
+                + ":" + e.getValue().material().getKey().getKey());
         }
         return result;
     }
 
-    /** Deserialize trim choices from YAML string map. */
     public void deserializeTrimChoices(UUID uuid, Map<String, String> data) {
         if (data == null || data.isEmpty()) return;
         for (Map.Entry<String, String> e : data.entrySet()) {
@@ -173,55 +141,56 @@ public class TrimManager {
             if (parts.length != 2) continue;
             TrimPattern  pattern  = findPattern(parts[0]);
             TrimMaterial material = findMaterial(parts[1]);
-            if (pattern != null && material != null) {
+            if (pattern != null && material != null)
                 setTrimChoice(uuid, e.getKey(), pattern, material);
-            }
         }
     }
 
-    /** Serialize shield design to a single string "patternType:patternColor:baseColor". */
     public String serializeShield(UUID uuid) {
         ShieldDesign d = shieldDesigns.get(uuid);
         if (d == null) return null;
-        return d.patternType().getIdentifier() + ":" + d.patternColor().name() + ":" + d.baseColor().name();
+        return d.patternType().getKey().getKey()
+            + ":" + d.patternColor().name()
+            + ":" + d.baseColor().name();
     }
 
-    /** Deserialize shield design from string. */
     public void deserializeShield(UUID uuid, String data) {
         if (data == null || data.isBlank()) return;
         String[] parts = data.split(":");
         if (parts.length != 3) return;
         try {
-            PatternType type  = PatternType.getByIdentifier(parts[0]);
-            DyeColor    pc    = DyeColor.valueOf(parts[1]);
-            DyeColor    bc    = DyeColor.valueOf(parts[2]);
+            PatternType type = Registry.BANNER_PATTERN.get(NamespacedKey.minecraft(parts[0]));
+            DyeColor    pc   = DyeColor.valueOf(parts[1]);
+            DyeColor    bc   = DyeColor.valueOf(parts[2]);
             if (type != null) setShieldDesign(uuid, type, pc, bc);
         } catch (Exception ignored) {}
     }
 
-    // ── Registry lookup helpers ─────────────────────────────────────
+    // ── Registry lookups ─────────────────────────────────────────────
 
     public static TrimPattern findPattern(String key) {
-        for (TrimPattern p : TrimPattern.values()) {
-            if (p.getKey().getKey().equalsIgnoreCase(key)) return p;
-        }
-        return null;
+        return Registry.TRIM_PATTERN.get(NamespacedKey.minecraft(key.toLowerCase()));
     }
 
     public static TrimMaterial findMaterial(String key) {
-        for (TrimMaterial m : TrimMaterial.values()) {
-            if (m.getKey().getKey().equalsIgnoreCase(key)) return m;
-        }
-        return null;
+        return Registry.TRIM_MATERIAL.get(NamespacedKey.minecraft(key.toLowerCase()));
     }
 
-    /** All available trim patterns for display in the GUI. */
     public static List<TrimPattern> allPatterns() {
-        return List.copyOf(TrimPattern.values());
+        List<TrimPattern> list = new ArrayList<>();
+        Registry.TRIM_PATTERN.forEach(list::add);
+        return list;
     }
 
-    /** All available trim materials for display in the GUI. */
     public static List<TrimMaterial> allMaterials() {
-        return List.copyOf(TrimMaterial.values());
+        List<TrimMaterial> list = new ArrayList<>();
+        Registry.TRIM_MATERIAL.forEach(list::add);
+        return list;
+    }
+
+    public static List<PatternType> allBannerPatterns() {
+        List<PatternType> list = new ArrayList<>();
+        Registry.BANNER_PATTERN.forEach(list::add);
+        return list;
     }
 }
