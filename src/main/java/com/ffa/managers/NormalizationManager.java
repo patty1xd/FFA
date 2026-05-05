@@ -9,9 +9,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ArmorMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Map;
 import java.util.Set;
 
 public class NormalizationManager implements Listener {
@@ -34,14 +34,12 @@ public class NormalizationManager implements Listener {
 
     public NormalizationManager(FFAPlugin plugin) {
         this.plugin = plugin;
-        // Periodic check every N ticks
         int interval = plugin.getConfig().getInt("normalization-check-interval", 40);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) normalizePlayer(p, false);
         }, interval, interval);
     }
 
-    // Triggered on item pickup
     @EventHandler
     public void onPickup(EntityPickupItemEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
@@ -50,12 +48,21 @@ public class NormalizationManager implements Listener {
 
     public void normalizePlayer(Player player, boolean notify) {
         int tier = plugin.getTierManager().getTier(player.getUniqueId());
+        boolean isRankHolder = plugin.getRankManager().hasRank(player.getUniqueId());
         boolean changed = false;
 
-        // Check armor slots
+        // ── Armor slots ──────────────────────────────────────────────────────
         ItemStack[] armor = player.getInventory().getArmorContents();
         for (int i = 0; i < armor.length; i++) {
             if (armor[i] == null) continue;
+
+            // If this player is NOT a rank holder and the armor has a trim, strip it
+            if (!isRankHolder && hasTrim(armor[i])) {
+                ItemStack stripped = plugin.getTrimManager().stripTrims(armor[i]);
+                if (stripped != null) { armor[i] = stripped; changed = true; }
+            }
+
+            // Material normalization (existing logic)
             if (isKoalaArmor(armor[i])) {
                 ItemStack normalized = normalizeArmor(armor[i], tier, i);
                 if (normalized != null) { armor[i] = normalized; changed = true; }
@@ -63,10 +70,30 @@ public class NormalizationManager implements Listener {
         }
         if (changed) player.getInventory().setArmorContents(armor);
 
-        // Check main inventory for armor and swords
+        // ── Main inventory ────────────────────────────────────────────────────
         for (int i = 0; i < player.getInventory().getSize(); i++) {
             ItemStack item = player.getInventory().getItem(i);
             if (item == null) continue;
+
+            // Strip trims from armor in inventory if not rank holder
+            if (!isRankHolder && ARMOR_MATERIALS.contains(item.getType()) && hasTrim(item)) {
+                ItemStack stripped = plugin.getTrimManager().stripTrims(item);
+                if (stripped != null) { player.getInventory().setItem(i, stripped); changed = true; continue; }
+            }
+
+            // Strip donor sword name from swords if not the owner
+            if (SWORD_MATERIALS.contains(item.getType())) {
+                ItemStack strippedSword = plugin.getKitManager().stripSwordName(item);
+                if (strippedSword != null && !isRankHolder) {
+                    // Replace with their own kit sword
+                    ItemStack ownSword = plugin.getKitManager().buildItem("tiers." + tier + ".kit.sword");
+                    player.getInventory().setItem(i, ownSword);
+                    changed = true;
+                    continue;
+                }
+            }
+
+            // Material normalization
             if (isKoalaArmor(item)) {
                 ItemStack normalized = normalizeArmorByMaterial(item, tier);
                 if (normalized != null) { player.getInventory().setItem(i, normalized); changed = true; }
@@ -76,17 +103,42 @@ public class NormalizationManager implements Listener {
             }
         }
 
-        // Check sword in hand
+        // ── Sword in hand ─────────────────────────────────────────────────────
         ItemStack hand = player.getInventory().getItemInMainHand();
         if (isKoalaSword(hand)) {
+            // Strip donor name if not rank holder
+            if (!isRankHolder) {
+                ItemStack strippedSword = plugin.getKitManager().stripSwordName(hand);
+                if (strippedSword != null) {
+                    ItemStack ownSword = plugin.getKitManager().buildItem("tiers." + tier + ".kit.sword");
+                    player.getInventory().setItemInMainHand(ownSword);
+                    changed = true;
+                }
+            }
             ItemStack normalized = normalizeSword(hand, tier);
             if (normalized != null) { player.getInventory().setItemInMainHand(normalized); changed = true; }
         }
 
+        // ── Offhand shield ────────────────────────────────────────────────────
+        ItemStack offhand = player.getInventory().getItemInOffHand();
+        if (!isRankHolder && offhand != null && offhand.getType() == Material.SHIELD) {
+            ItemStack strippedShield = plugin.getTrimManager().stripShieldDesign(offhand);
+            if (strippedShield != null) { player.getInventory().setItemInOffHand(strippedShield); changed = true; }
+        }
+
         if (changed && notify) {
-            String msg = plugin.getConfig().getString("messages.item-normalized", "§7Your gear was adjusted to your tier.");
+            String msg = plugin.getConfig().getString("messages.item-normalized",
+                "§7Your gear was adjusted to your tier.");
             player.sendMessage(msg);
         }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private boolean hasTrim(ItemStack item) {
+        if (item == null) return false;
+        if (!(item.getItemMeta() instanceof ArmorMeta meta)) return false;
+        return meta.getTrim() != null;
     }
 
     private boolean isKoalaArmor(ItemStack item) {
@@ -108,33 +160,29 @@ public class NormalizationManager implements Listener {
             default -> null;
         };
         if (slotName == null) return null;
-
-        // Only replace if material is wrong — preserve durability
-        String expectedMat = plugin.getConfig().getString("tiers." + tier + ".kit." + slotName + ".material", "DIAMOND_HELMET");
+        String expectedMat = plugin.getConfig().getString(
+            "tiers." + tier + ".kit." + slotName + ".material", "DIAMOND_HELMET");
         if (item.getType() == Material.valueOf(expectedMat)) return null;
-
         return buildNormalizedArmor(slotName, tier);
     }
 
     private ItemStack normalizeArmorByMaterial(ItemStack item, int tier) {
         String slotName = null;
         String matName = item.getType().name().toLowerCase();
-        if (matName.contains("helmet")) slotName = "helmet";
+        if (matName.contains("helmet"))      slotName = "helmet";
         else if (matName.contains("chestplate")) slotName = "chestplate";
-        else if (matName.contains("leggings")) slotName = "leggings";
-        else if (matName.contains("boots")) slotName = "boots";
+        else if (matName.contains("leggings"))   slotName = "leggings";
+        else if (matName.contains("boots"))      slotName = "boots";
         if (slotName == null) return null;
-
-        // Only normalize if the MATERIAL is wrong — don't touch enchants/durability
-        String expectedMat = plugin.getConfig().getString("tiers." + tier + ".kit." + slotName + ".material", "DIAMOND_HELMET");
+        String expectedMat = plugin.getConfig().getString(
+            "tiers." + tier + ".kit." + slotName + ".material", "DIAMOND_HELMET");
         if (item.getType() == Material.valueOf(expectedMat)) return null;
-
         return buildNormalizedArmor(slotName, tier);
     }
 
     private ItemStack normalizeSword(ItemStack item, int tier) {
-        String expectedMat = plugin.getConfig().getString("tiers." + tier + ".kit.sword.material", "DIAMOND_SWORD");
-        // Only normalize if material is wrong
+        String expectedMat = plugin.getConfig().getString(
+            "tiers." + tier + ".kit.sword.material", "DIAMOND_SWORD");
         if (item.getType() == Material.valueOf(expectedMat)) return null;
         return buildNormalizedSword(tier);
     }
@@ -145,7 +193,7 @@ public class NormalizationManager implements Listener {
         Material mat;
         try { mat = Material.valueOf(matName); } catch (Exception e) { return null; }
         ItemStack item = new ItemStack(mat);
-        ItemMeta meta = item.getItemMeta();
+        ItemMeta meta  = item.getItemMeta();
         var enchSection = plugin.getConfig().getConfigurationSection(path + ".enchants");
         if (enchSection != null) {
             for (String enchName : enchSection.getKeys(false)) {
@@ -163,7 +211,7 @@ public class NormalizationManager implements Listener {
         Material mat;
         try { mat = Material.valueOf(matName); } catch (Exception e) { return null; }
         ItemStack item = new ItemStack(mat);
-        ItemMeta meta = item.getItemMeta();
+        ItemMeta meta  = item.getItemMeta();
         var enchSection = plugin.getConfig().getConfigurationSection(path + ".enchants");
         if (enchSection != null) {
             for (String enchName : enchSection.getKeys(false)) {
@@ -173,18 +221,5 @@ public class NormalizationManager implements Listener {
         }
         item.setItemMeta(meta);
         return item;
-    }
-
-    private boolean hasCorrectEnchants(ItemStack item, int tier, String slotName) {
-        var enchSection = plugin.getConfig().getConfigurationSection("tiers." + tier + ".kit." + slotName + ".enchants");
-        if (enchSection == null) return true;
-        for (String enchName : enchSection.getKeys(false)) {
-            Enchantment ench = Enchantment.getByName(enchName);
-            if (ench == null) continue;
-            int expected = enchSection.getInt(enchName);
-            int actual = item.getEnchantmentLevel(ench);
-            if (actual != expected) return false;
-        }
-        return true;
     }
 }
