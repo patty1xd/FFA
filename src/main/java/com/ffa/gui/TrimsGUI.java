@@ -128,6 +128,11 @@ public class TrimsGUI implements Listener {
     private record ColorOption(String label, String code, Material icon) {}
     private record SwordStyle(String label, String code, Material icon) {}
 
+    // New field needed for shield right-column paging
+    private final Map<UUID, Integer> shieldPatColorPage = new HashMap<>();
+    // Prevents onClose from wiping page state during internal navigation
+    private final Set<UUID> navigating = new HashSet<>();
+
     public TrimsGUI(FFAPlugin plugin) { this.plugin = plugin; }
 
     // ── Open ─────────────────────────────────────────────────────────
@@ -153,9 +158,13 @@ public class TrimsGUI implements Listener {
     }
 
     private void openPage(Player player, int page) {
-        pageMap.put(player.getUniqueId(), page);
+        UUID uuid = player.getUniqueId();
+        pageMap.put(uuid, page);
         Inventory inv = buildPage(player, page);
-        if (inv != null) player.openInventory(inv);
+        if (inv != null) {
+            navigating.add(uuid);
+            player.openInventory(inv);
+        }
     }
 
     // ── Page builders ────────────────────────────────────────────────
@@ -211,10 +220,6 @@ public class TrimsGUI implements Listener {
         return inv;
     }
 
-    /**
-     * Creates a trimmed armor item for the main menu preview.
-     * If no trim is selected, returns a plain item with lore.
-     */
     private ItemStack makeTrimmedArmorItem(Material mat, TrimManager.TrimChoice choice, String title) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
@@ -254,7 +259,6 @@ public class TrimsGUI implements Listener {
         String patName = current != null ? current.pattern().getKey().getKey()  : "None";
         String matName = current != null ? current.material().getKey().getKey() : "None";
 
-        // Preview item in slot 4 with actual trim applied
         ItemStack previewItem = new ItemStack(icon);
         ItemMeta previewMeta = previewItem.getItemMeta();
         if (previewMeta instanceof ArmorMeta am && current != null) {
@@ -271,8 +275,6 @@ public class TrimsGUI implements Listener {
         }
         inv.setItem(4, previewItem);
 
-        // ── Patterns: slots 9–15 (7 per page) ──
-        // FIX 1: patStart is correctly used for both display AND index reference
         int patStart = pPage * 7;
         for (int i = 0; i < 7 && (patStart + i) < ALL_PATTERNS.size(); i++) {
             TrimPattern pat = ALL_PATTERNS.get(patStart + i);
@@ -289,7 +291,6 @@ public class TrimsGUI implements Listener {
             }
             inv.setItem(9 + i, pi);
         }
-        // Pattern nav: 16 = prev, 17 = next
         if (pPage > 0)
             inv.setItem(16, makeItem(Material.ARROW, "§7← Prev Patterns",
                 "§8Page " + pPage + " / " + ((ALL_PATTERNS.size() - 1) / 7)));
@@ -297,7 +298,6 @@ public class TrimsGUI implements Listener {
             inv.setItem(17, makeItem(Material.ARROW, "§7Next Patterns →",
                 "§8Page " + (pPage + 2) + " / " + ((ALL_PATTERNS.size() - 1) / 7 + 1)));
 
-        // ── Materials: slots 27–33 (7 per page) ──
         int matStart = mPage * 7;
         for (int i = 0; i < 7 && (matStart + i) < ALL_MATERIALS.size(); i++) {
             TrimMaterial mat = ALL_MATERIALS.get(matStart + i);
@@ -306,7 +306,6 @@ public class TrimsGUI implements Listener {
                 (sel ? "§a✔ " : "§e") + capitalize(mat.getKey().getKey()),
                 "§7Click to select this material"));
         }
-        // Material nav: 34 = prev, 35 = next
         if (mPage > 0)
             inv.setItem(34, makeItem(Material.ARROW, "§7← Prev Materials",
                 "§8Page " + mPage + " / " + ((ALL_MATERIALS.size() - 1) / 7)));
@@ -314,72 +313,35 @@ public class TrimsGUI implements Listener {
             inv.setItem(35, makeItem(Material.ARROW, "§7Next Materials →",
                 "§8Page " + (mPage + 2) + " / " + ((ALL_MATERIALS.size() - 1) / 7 + 1)));
 
-        // Back: slot 45
         inv.setItem(45, makeItem(Material.BARRIER, "§cBack to Menu"));
         return inv;
     }
 
-    // ── FIX 2: Shield page redesigned like a loom ─────────────────────
-    // Layout (54 slots):
-    //   Col 0-1 (slots 0,9,18,27,36,45 etc.) = base color palette (left column)
-    //   Col 2-6 center area = pattern type grid
-    //   Col 7-8 (slots 7,16,25,34,43,52 etc.) = pattern color palette (right column)
-    //   Row 0 top = labels/preview
-    //
-    // Simplified to a clean 54-slot loom-style layout:
-    //   Slots 0-8   = top row: [base label][...][preview shield][...][pat color label]
-    //   Slots 9-17  = base colors column (left 3: 9,10,11) | patterns center (12-14) | pat colors right (15,16,17)
-    //   Etc.
-    //
-    // Actual clean layout:
-    //   Left column  (slots 0,9,18,27,36,45)       = base color swatches (6 visible + scroll)
-    //   Center area  (slots 2-6, 11-15, 20-24, ...) = pattern type buttons (5 wide, 5 tall = 25)
-    //   Right column (slots 8,17,26,35,44,53)       = pattern color swatches
-    //   Slot 1 = "Base Color" label, slot 7 = "Pat Color" label
-    //   Slot 4 (top center) = preview / current selection info
-    //
-    // We'll use a 54-slot inv, loom-inspired:
-    //   Col 0 (slots 0,9,18,27,36,45)   = base color choices (up to 6, paged)
-    //   Col 1 = divider glass
-    //   Cols 2-6 (slots 2-6, 11-15, etc.) = pattern types (5 cols × 5 rows = 25 patterns, paged)
-    //   Col 7 = divider glass
-    //   Col 8 (slots 8,17,26,35,44,53) = pattern color choices (up to 6, paged)
-    //   Row 0: base label, div, [pattern nav prev][page info][pattern nav next], div, patcolor label
-    //   Row 5: base scroll, div, [back][preview shield][save/ok], div, patcolor scroll
     private Inventory buildShieldPage(Player player) {
         UUID uuid = player.getUniqueId();
         TrimManager.ShieldDesign draft = draftShield.get(uuid);
 
-        // Page state for shield (reuse patternPage for banner pattern page, materialPage for color pages)
         int bannerPatPage = patternPage.getOrDefault(uuid, 0);
         int baseColorPage = materialPage.getOrDefault(uuid, 0);
 
         Inventory inv = Bukkit.createInventory(null, 54, TITLE_SHIELD);
 
-        // Fill everything with dark glass first
         fill(inv, Material.GRAY_STAINED_GLASS_PANE);
 
-        // Divider columns (col 1 and col 7) with magenta glass
         int[] dividerSlots = {1,10,19,28,37,46, 7,16,25,34,43,52};
         for (int s : dividerSlots) inv.setItem(s, makeItem(Material.MAGENTA_STAINED_GLASS_PANE, "§0"));
 
-        // Current selections
         DyeColor    baseColor = draft != null ? draft.baseColor()    : DyeColor.WHITE;
         PatternType patType   = draft != null ? draft.patternType()  : ALL_BANNER_PATTERNS.get(0);
         DyeColor    patColor  = draft != null ? draft.patternColor() : DyeColor.BLACK;
         DyeColor[]  dyes      = DyeColor.values();
 
-        // ── Header row ──
-        // Slot 0: Base color label
         inv.setItem(0, makeItem(dyeToWool(baseColor), "§fBase Color",
             "§7Selected: §e" + baseColor.name(), "§7← Scroll ↓"));
-        // Slot 4: Preview shield (uses BlockStateMeta banner)
         inv.setItem(4, makeShieldPreview(draft, patType, patColor, baseColor));
-        // Slot 8: Pattern color label
         inv.setItem(8, makeItem(dyeToWool(patColor), "§fPattern Color",
             "§7Selected: §e" + patColor.name(), "§7Scroll ↓ →"));
 
-        // ── Left column: base colors (col 0, rows 1-4 = slots 9,18,27,36) ──
         int baseStart = baseColorPage * 4;
         for (int i = 0; i < 4 && (baseStart + i) < dyes.length; i++) {
             DyeColor dc = dyes[baseStart + i];
@@ -388,14 +350,11 @@ public class TrimsGUI implements Listener {
                 (sel ? "§a✔ " : "§7") + dc.name(),
                 "§7Click to set base color"));
         }
-        // Base color nav: slot 45 = prev/next
         if (baseColorPage > 0)
             inv.setItem(45, makeItem(Material.ARROW, "§7↑ More Colors"));
         else if (baseStart + 4 < dyes.length)
             inv.setItem(45, makeItem(Material.ARROW, "§7↓ More Colors"));
 
-        // ── Center area: pattern types (cols 2-6, rows 1-4 = 20 slots per page) ──
-        // Slots: row1=11-15, row2=20-24, row3=29-33, row4=38-42
         int[] centerSlots = {11,12,13,14,15, 20,21,22,23,24, 29,30,31,32,33, 38,39,40,41,42};
         int patStart = bannerPatPage * centerSlots.length;
         for (int i = 0; i < centerSlots.length && (patStart + i) < ALL_BANNER_PATTERNS.size(); i++) {
@@ -406,7 +365,6 @@ public class TrimsGUI implements Listener {
                 (sel ? "§a✔ " : "§d") + formatBannerPatternName(pt),
                 "§7Click to select pattern"));
         }
-        // Pattern nav row (row 5, center): slots 47,48,49,50,51
         if (bannerPatPage > 0)
             inv.setItem(47, makeItem(Material.ARROW, "§7← Prev Patterns"));
         inv.setItem(49, makeItem(Material.SHIELD, "§dCurrent Design",
@@ -416,24 +374,8 @@ public class TrimsGUI implements Listener {
         if (patStart + centerSlots.length < ALL_BANNER_PATTERNS.size())
             inv.setItem(51, makeItem(Material.ARROW, "§7Next Patterns →"));
 
-        // Back button
         inv.setItem(45, makeItem(Material.BARRIER, "§cBack to Menu"));
 
-        // ── Right column: pattern colors (col 8, rows 1-4 = slots 17,26,35,44) ──
-        // We just show 4 dye colors per "page" — but there are 16, so we need a separate page tracker.
-        // Reuse patternPage for banner patterns; use a shield-specific key by storing in materialPage offset.
-        // Actually let's just show all 16 in two halves: top 8 rows 1-2, bottom 8 rows 3-4 — no, col 8 only has 4 rows.
-        // Show first 4 dyes in rows 1-4 right column, with scroll at row 5.
-        // We'll use a hidden "colorPage" via a separate map not currently used — let's add shieldColorPage logic
-        // using the patternPage map is taken, materialPage is taken for baseColorPage...
-        // Simple: split into two groups with slot 53 as toggle.
-        // For now use materialPage for base scroll and a fixed offset for right col.
-        // Right col shows dyes[0-3] always in rows 1-4 and dyes[4-7] etc if scrolled.
-        // We'll track right-col separately - but we've used both maps. 
-        // Pragmatic solution: right column shows 4 at a time, we'll use the HIGH bits of materialPage.
-        // materialPage low nibble = baseColorPage, high nibble = patColorPage. But that's hacky.
-        // Cleanest: just store patColorPage in a new map. Let's add one.
-        // --> See shieldPatColorPage map added below the field declarations.
         int patColorPage = shieldPatColorPage.getOrDefault(uuid, 0);
         int patColorStart = patColorPage * 4;
         for (int i = 0; i < 4 && (patColorStart + i) < dyes.length; i++) {
@@ -443,7 +385,6 @@ public class TrimsGUI implements Listener {
                 (sel ? "§a✔ " : "§7") + dc.name(),
                 "§7Click to set pattern color"));
         }
-        // Pat color nav: slot 53
         if (patColorPage > 0 || patColorStart + 4 < dyes.length)
             inv.setItem(53, makeItem(Material.ARROW,
                 patColorStart + 4 < dyes.length ? "§7↓ More" : "§7↑ Back"));
@@ -451,7 +392,6 @@ public class TrimsGUI implements Listener {
         return inv;
     }
 
-    /** Builds a banner/shield preview item showing the current draft design. */
     private ItemStack makeShieldPreview(TrimManager.ShieldDesign draft, PatternType patType, DyeColor patColor, DyeColor baseColor) {
         ItemStack shield = new ItemStack(Material.SHIELD);
         ItemMeta meta = shield.getItemMeta();
@@ -492,7 +432,6 @@ public class TrimsGUI implements Listener {
         return inv;
     }
 
-    // ── FIX 3: Sword name page uses SWORD_STYLES ──────────────────────
     private Inventory buildSwordNamePage(Player player) {
         UUID uuid        = player.getUniqueId();
         String curName   = draftSwordName.getOrDefault(uuid, "");
@@ -510,7 +449,6 @@ public class TrimsGUI implements Listener {
         inv.setItem(15, makeItem(Material.BARRIER, "§cClear Name",
             "§7Removes the custom sword name."));
 
-        // Sword style grid: slots 18-37 (20 styles)
         for (int i = 0; i < SWORD_STYLES.size(); i++) {
             SwordStyle s = SWORD_STYLES.get(i);
             boolean sel  = s.code().equals(curStyle);
@@ -595,10 +533,9 @@ public class TrimsGUI implements Listener {
         if (name.equals("← Prev Materials")) { materialPage.merge(uuid, -1, Integer::sum); openPage(player, pageForSlot(slot)); return; }
         if (name.equals("Next Materials →"))  { materialPage.merge(uuid,  1, Integer::sum); openPage(player, pageForSlot(slot)); return; }
 
-        // ── FIX 1: Pattern selection — use pPage offset in index calculation ──
         if (slotIndex >= 9 && slotIndex <= 15) {
             int pPage = patternPage.getOrDefault(uuid, 0);
-            int idx   = pPage * 7 + (slotIndex - 9);   // <-- was missing pPage * 7
+            int idx   = pPage * 7 + (slotIndex - 9);
             if (idx < ALL_PATTERNS.size()) {
                 TrimPattern pat = ALL_PATTERNS.get(idx);
                 TrimManager.TrimChoice cur = draftTrims.getOrDefault(uuid, new HashMap<>()).get(slot);
@@ -611,10 +548,9 @@ public class TrimsGUI implements Listener {
             return;
         }
 
-        // ── FIX 1: Material selection — use mPage offset in index calculation ──
         if (slotIndex >= 27 && slotIndex <= 33) {
             int mPage = materialPage.getOrDefault(uuid, 0);
-            int idx   = mPage * 7 + (slotIndex - 27);  // <-- was missing mPage * 7
+            int idx   = mPage * 7 + (slotIndex - 27);
             if (idx < ALL_MATERIALS.size()) {
                 TrimMaterial mat = ALL_MATERIALS.get(idx);
                 TrimManager.TrimChoice cur = draftTrims.getOrDefault(uuid, new HashMap<>()).get(slot);
@@ -626,9 +562,6 @@ public class TrimsGUI implements Listener {
             }
         }
     }
-
-    // New field needed for shield right-column paging — add near the top of the class:
-    private final Map<UUID, Integer> shieldPatColorPage = new HashMap<>();
 
     private void handleShieldPage(Player player, UUID uuid, ItemStack clicked, int slotIndex) {
         String name = stripColor(displayName(clicked));
@@ -647,9 +580,8 @@ public class TrimsGUI implements Listener {
         int baseColorPage  = materialPage.getOrDefault(uuid, 0);
         int patColorPage   = shieldPatColorPage.getOrDefault(uuid, 0);
 
-        // Left column: base color swatches (col 0 = slots 9, 18, 27, 36)
         if (slotIndex == 9 || slotIndex == 18 || slotIndex == 27 || slotIndex == 36) {
-            int row = (slotIndex / 9) - 1; // row 1-4 → index 0-3
+            int row = (slotIndex / 9) - 1;
             int idx = baseColorPage * 4 + row;
             if (idx < dyes.length) {
                 draftShield.put(uuid, new TrimManager.ShieldDesign(patType, patColor, dyes[idx]));
@@ -657,7 +589,6 @@ public class TrimsGUI implements Listener {
             }
             return;
         }
-        // Left column scroll (slot 45)
         if (slotIndex == 45) {
             if (name.contains("↑")) materialPage.merge(uuid, -1, Integer::sum);
             else                    materialPage.merge(uuid,  1, Integer::sum);
@@ -665,11 +596,9 @@ public class TrimsGUI implements Listener {
             return;
         }
 
-        // Center area pattern nav
         if (name.equals("← Prev Patterns")) { patternPage.merge(uuid, -1, Integer::sum); openPage(player, PAGE_SHIELD); return; }
         if (name.equals("Next Patterns →"))  { patternPage.merge(uuid,  1, Integer::sum); openPage(player, PAGE_SHIELD); return; }
 
-        // Center pattern slots: rows 1-4, cols 2-6
         int[] centerSlots = {11,12,13,14,15, 20,21,22,23,24, 29,30,31,32,33, 38,39,40,41,42};
         for (int i = 0; i < centerSlots.length; i++) {
             if (slotIndex == centerSlots[i]) {
@@ -682,9 +611,8 @@ public class TrimsGUI implements Listener {
             }
         }
 
-        // Right column: pattern color swatches (col 8 = slots 17, 26, 35, 44)
         if (slotIndex == 17 || slotIndex == 26 || slotIndex == 35 || slotIndex == 44) {
-            int row = (slotIndex - 17) / 9; // 0-3
+            int row = (slotIndex - 17) / 9;
             int idx = patColorPage * 4 + row;
             if (idx < dyes.length) {
                 draftShield.put(uuid, new TrimManager.ShieldDesign(patType, dyes[idx], baseColor));
@@ -692,7 +620,6 @@ public class TrimsGUI implements Listener {
             }
             return;
         }
-        // Right column scroll (slot 53)
         if (slotIndex == 53) {
             if (name.contains("↑")) shieldPatColorPage.merge(uuid, -1, Integer::sum);
             else                    shieldPatColorPage.merge(uuid,  1, Integer::sum);
@@ -713,7 +640,6 @@ public class TrimsGUI implements Listener {
         }
     }
 
-    // ── FIX 3: Sword name handler uses SWORD_STYLES ───────────────────
     private void handleSwordNamePage(Player player, UUID uuid, ItemStack clicked) {
         String name = stripColor(displayName(clicked));
         switch (name) {
@@ -726,7 +652,6 @@ public class TrimsGUI implements Listener {
                 return;
             }
         }
-        // Style selection — strip the checkmark and match label
         for (SwordStyle s : SWORD_STYLES) {
             String cleanLabel = stripColor(s.label());
             if (cleanLabel.equals(name)) {
@@ -797,10 +722,19 @@ public class TrimsGUI implements Listener {
     public void onClose(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
         UUID uuid = player.getUniqueId();
+        // If we triggered this close by opening a new page, skip cleanup
+        if (navigating.remove(uuid)) return;
+        // Genuine close — wipe all state
         pageMap.remove(uuid);
         patternPage.remove(uuid);
         materialPage.remove(uuid);
         shieldPatColorPage.remove(uuid);
+        draftTrims.remove(uuid);
+        draftShield.remove(uuid);
+        draftChatColor.remove(uuid);
+        draftSwordName.remove(uuid);
+        draftSwordColor.remove(uuid);
+        awaitingName.remove(uuid);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────
@@ -877,8 +811,8 @@ public class TrimsGUI implements Listener {
             case "EMERALD"   -> Material.EMERALD;
             case "LAPIS"     -> Material.LAPIS_LAZULI;
             case "QUARTZ"    -> Material.QUARTZ;
-            case "RESIN"     -> Material.RESIN_BRICK;
-            default          -> Material.RESIN_BRICK;
+            case "RESIN"     -> Material.BRICK;
+            default          -> Material.BRICK;
         };
     }
 }
