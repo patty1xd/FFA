@@ -316,3 +316,9 @@ arena-cleanup:
   enabled: true
   interval-seconds: 60
   message: "&7Arena items cleared."
+
+  # RANKS NPC settings
+rank-npc:
+  # The URL players are sent when they right-click the RANKS witch NPC
+  store-url: "https://your-store.tebex.io"
+
