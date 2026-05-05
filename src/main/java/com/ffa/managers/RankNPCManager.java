@@ -20,7 +20,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
@@ -29,19 +28,18 @@ import java.util.UUID;
 
 /**
  * RankNPCManager
- * Spawns a Witch NPC named "RANKS".
- * Right-clicking it sends the player a clickable chat link to the store URL
- * (configured in config.yml under rank-npc.store-url).
+ * A simple persistent witch NPC named "RANKS".
+ * Behaves exactly like a mob with a name tag — won't despawn naturally.
+ * Chunk loading is handled by Minecraft itself (persistent=true, removeWhenFarAway=false).
+ * Right-clicking sends the player a clickable store link.
  */
 public class RankNPCManager implements Listener {
 
-    private final FFAPlugin    plugin;
+    private final FFAPlugin plugin;
     private final NamespacedKey NPC_KEY;
 
-    private UUID      npcUUID;
-    private Location  savedLocation;
-    private File      npcFile;
-    private FileConfiguration npcConfig;
+    private File              dataFile;
+    private FileConfiguration dataConfig;
 
     public RankNPCManager(FFAPlugin plugin) {
         this.plugin  = plugin;
@@ -49,11 +47,11 @@ public class RankNPCManager implements Listener {
         loadData();
     }
 
-    // ── Spawn / Remove ──────────────────────────────────────────────
+    // ── Spawn ───────────────────────────────────────────────────────
 
     public void spawnNPC(Location loc) {
-        purgeTagged(loc.getWorld());
-        savedLocation = loc.clone();
+        // Remove any existing tagged witches first
+        removeExisting(loc.getWorld());
 
         Witch npc = (Witch) loc.getWorld().spawnEntity(loc, EntityType.WITCH);
         npc.setCustomName("§d§lRANKS");
@@ -61,69 +59,27 @@ public class RankNPCManager implements Listener {
         npc.setAI(false);
         npc.setInvulnerable(true);
         npc.setSilent(true);
+        // These two are the key — same effect as a name tag on a mob
         npc.setPersistent(true);
         npc.setRemoveWhenFarAway(false);
         npc.getPersistentDataContainer().set(NPC_KEY, PersistentDataType.BYTE, (byte) 1);
-        npcUUID = npc.getUniqueId();
+
         saveData(loc);
+        plugin.getLogger().info("RANKS NPC spawned.");
     }
 
     public void removeNPC() {
-        if (savedLocation != null) purgeTagged(savedLocation.getWorld());
-        if (npcUUID != null) {
-            Entity e = Bukkit.getEntity(npcUUID);
-            if (e != null) e.remove();
-            npcUUID = null;
-        }
+        if (!dataConfig.contains("world")) return;
+        World world = Bukkit.getWorld(dataConfig.getString("world", "world"));
+        if (world != null) removeExisting(world);
         clearData();
     }
 
+    /** Called once on startup to tag-scan loaded entities. No respawn loop needed. */
     public void restoreNPC() {
-        if (!npcConfig.contains("world")) return;
-        World world = Bukkit.getWorld(npcConfig.getString("world", "world"));
-        if (world == null) return;
-        Location loc = new Location(world,
-            npcConfig.getDouble("x"), npcConfig.getDouble("y"), npcConfig.getDouble("z"),
-            (float) npcConfig.getDouble("yaw"), 0f);
-        savedLocation = loc.clone();
-        Bukkit.getScheduler().runTaskLater(plugin, () -> spawnNPC(loc), 40L);
-        Bukkit.getScheduler().runTaskTimer(plugin, this::checkAndRestore, 1200L, 1200L);
-    }
-
-    private void checkAndRestore() {
-        if (savedLocation == null) return;
-        if (npcUUID != null) {
-            Entity e = Bukkit.getEntity(npcUUID);
-            if (e != null && !e.isDead() && e.isValid()) return;
-        }
-        if (savedLocation.getWorld() != null) {
-            for (Entity entity : savedLocation.getWorld().getEntities()) {
-                if (isNPC(entity)) { npcUUID = entity.getUniqueId(); return; }
-            }
-        }
-        spawnNPC(savedLocation);
-    }
-
-    private void purgeTagged(World world) {
-        if (world == null) return;
-        for (Entity e : world.getEntities()) {
-            if (e instanceof Witch w &&
-                w.getPersistentDataContainer().has(NPC_KEY, PersistentDataType.BYTE)) {
-                w.remove();
-            }
-        }
-        if (npcUUID != null) {
-            Entity e = Bukkit.getEntity(npcUUID);
-            if (e != null) e.remove();
-            npcUUID = null;
-        }
-    }
-
-    public boolean isNPC(Entity entity) {
-        if (entity == null) return false;
-        if (npcUUID != null && entity.getUniqueId().equals(npcUUID)) return true;
-        return entity instanceof Witch w &&
-               w.getPersistentDataContainer().has(NPC_KEY, PersistentDataType.BYTE);
+        // Nothing to do — persistent=true means the mob survives restarts automatically.
+        // It will be in the world's entity list when the chunk loads.
+        // We just register our listener so right-clicks work.
     }
 
     // ── Events ──────────────────────────────────────────────────────
@@ -153,44 +109,43 @@ public class RankNPCManager implements Listener {
         if (isNPC(event.getEntity())) event.setCancelled(true);
     }
 
-    @EventHandler
-    public void onChunkLoad(ChunkLoadEvent event) {
-        if (savedLocation == null) return;
-        if (!event.getWorld().equals(savedLocation.getWorld())) return;
-        int cx = savedLocation.getBlockX() >> 4;
-        int cz = savedLocation.getBlockZ() >> 4;
-        if (event.getChunk().getX() != cx || event.getChunk().getZ() != cz) return;
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (npcUUID != null) {
-                Entity e = Bukkit.getEntity(npcUUID);
-                if (e != null && !e.isDead() && e.isValid()) return;
-            }
-            spawnNPC(savedLocation);
-        }, 10L);
+    // ── Helpers ─────────────────────────────────────────────────────
+
+    public boolean isNPC(Entity entity) {
+        if (entity == null) return false;
+        return entity instanceof Witch &&
+               entity.getPersistentDataContainer().has(NPC_KEY, PersistentDataType.BYTE);
     }
 
-    // ── Persistence ─────────────────────────────────────────────────
+    private void removeExisting(World world) {
+        if (world == null) return;
+        world.getEntities().stream()
+            .filter(this::isNPC)
+            .forEach(Entity::remove);
+    }
+
+    // ── Persistence (just saves spawn location for /spawnranknpc re-use) ──
 
     private void saveData(Location loc) {
-        npcConfig.set("world", loc.getWorld().getName());
-        npcConfig.set("x",   loc.getX());
-        npcConfig.set("y",   loc.getY());
-        npcConfig.set("z",   loc.getZ());
-        npcConfig.set("yaw", (double) loc.getYaw());
-        try { npcConfig.save(npcFile); } catch (IOException e) { e.printStackTrace(); }
+        dataConfig.set("world", loc.getWorld().getName());
+        dataConfig.set("x",   loc.getX());
+        dataConfig.set("y",   loc.getY());
+        dataConfig.set("z",   loc.getZ());
+        dataConfig.set("yaw", (double) loc.getYaw());
+        try { dataConfig.save(dataFile); } catch (IOException e) { e.printStackTrace(); }
     }
 
     private void loadData() {
-        npcFile = new File(plugin.getDataFolder(), "ranknpc.yml");
-        if (!npcFile.exists()) {
+        dataFile = new File(plugin.getDataFolder(), "ranknpc.yml");
+        if (!dataFile.exists()) {
             plugin.getDataFolder().mkdirs();
-            try { npcFile.createNewFile(); } catch (IOException e) { e.printStackTrace(); }
+            try { dataFile.createNewFile(); } catch (IOException e) { e.printStackTrace(); }
         }
-        npcConfig = YamlConfiguration.loadConfiguration(npcFile);
+        dataConfig = YamlConfiguration.loadConfiguration(dataFile);
     }
 
     private void clearData() {
-        npcConfig.set("world", null);
-        try { npcConfig.save(npcFile); } catch (IOException e) { e.printStackTrace(); }
+        dataConfig.set("world", null);
+        try { dataConfig.save(dataFile); } catch (IOException e) { e.printStackTrace(); }
     }
 }
