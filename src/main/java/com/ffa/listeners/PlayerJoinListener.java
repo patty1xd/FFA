@@ -25,13 +25,21 @@ public class PlayerJoinListener implements Listener {
         plugin.getBoardManager().updatePlayer(player);
         plugin.getBoardManager().updateNameTag(player);
         plugin.getNormalizationManager().normalizePlayer(player, false);
-        String tierDisplay = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(player.getUniqueId()));
+
+        // Apply donor trims + custom sword name if rank is active
+        if (plugin.getRankManager().hasRank(player.getUniqueId())) {
+            plugin.getTrimManager().applyTrims(player);
+            plugin.getKitManager().applyCustomSwordName(player);
+        }
+
+        String tierDisplay = plugin.getTierManager().getTierDisplay(
+            plugin.getTierManager().getTier(player.getUniqueId()));
         event.setJoinMessage(null);
         List<String> lines = plugin.getConfig().getStringList("messages.join");
         for (String line : lines) {
             Bukkit.broadcastMessage(line
                 .replace("{player}", player.getName())
-                .replace("{tier}", tierDisplay)
+                .replace("{tier}",   tierDisplay)
                 .replace("{online}", String.valueOf(Bukkit.getOnlinePlayers().size()))
                 .replace("&", "§"));
         }
@@ -42,10 +50,12 @@ public class PlayerJoinListener implements Listener {
         plugin.getTierManager().saveAll();
         plugin.getStatsManager().saveAll();
         plugin.getChatManager().clearPlayer(event.getPlayer().getUniqueId());
-        String tierDisplay = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(event.getPlayer().getUniqueId()));
-        String msg = plugin.getConfig().getString("messages.quit", "§8[§c-§8] {tier} §f{player} §7left.")
+        String tierDisplay = plugin.getTierManager().getTierDisplay(
+            plugin.getTierManager().getTier(event.getPlayer().getUniqueId()));
+        String msg = plugin.getConfig().getString("messages.quit",
+            "§8[§c-§8] {tier} §f{player} §7left.")
             .replace("{player}", event.getPlayer().getName())
-            .replace("{tier}", tierDisplay)
+            .replace("{tier}",   tierDisplay)
             .replace("&", "§");
         event.setQuitMessage(msg);
     }
@@ -53,7 +63,7 @@ public class PlayerJoinListener implements Listener {
     // NORMAL priority (default) — runs after LOW priority filter has had its chance to cancel
     @EventHandler(priority = EventPriority.NORMAL)
     public void onChat(AsyncPlayerChatEvent event) {
-        if (event.isCancelled()) return; // Respect filter cancellation
+        if (event.isCancelled()) return;
         event.setCancelled(true);
         String formatted = plugin.getChatManager().formatChat(event.getPlayer(), event.getMessage());
         event.getPlayer().getServer().broadcastMessage(formatted);
