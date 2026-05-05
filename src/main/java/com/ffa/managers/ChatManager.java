@@ -24,7 +24,6 @@ public class ChatManager {
         if (!hasPAPI) return "";
         try {
             String prefix = PlaceholderAPI.setPlaceholders(player, "%luckperms_prefix%");
-            // If null, empty, or literally "null" return empty string
             if (prefix == null || prefix.isEmpty() || prefix.equalsIgnoreCase("null")) return "";
             return prefix;
         } catch (Exception e) {
@@ -58,16 +57,29 @@ public class ChatManager {
 
     public void clearPlayer(UUID uuid) { lastMessageTarget.remove(uuid); }
 
+    /**
+     * Formats the chat message for a player.
+     * If the player has an active donor rank and has chosen a chat color,
+     * their message text is wrapped in that color.
+     */
     public String formatChat(Player player, String message) {
-        String tierDisplay = plugin.getTierManager().getTierDisplay(plugin.getTierManager().getTier(player.getUniqueId()));
-        String lpPrefix = getLPPrefix(player);
-        String prefixPart = lpPrefix.isEmpty() ? "" : lpPrefix + " ";
+        String tierDisplay = plugin.getTierManager().getTierDisplay(
+            plugin.getTierManager().getTier(player.getUniqueId()));
+        String lpPrefix    = getLPPrefix(player);
+        String prefixPart  = lpPrefix.isEmpty() ? "" : lpPrefix + " ";
 
-        return plugin.getConfig().getString("chat.format", "{lp_prefix}{tier} §f{player} §7» §f{message}")
+        // Apply donor chat color to the message portion only
+        String chatColor = plugin.getRankManager().getChatColor(player.getUniqueId());
+        String coloredMessage = (chatColor != null && !chatColor.isBlank())
+            ? chatColor + message + "§r"
+            : message;
+
+        return plugin.getConfig().getString("chat.format",
+            "{lp_prefix}{tier} §f{player} §7» §f{message}")
             .replace("{lp_prefix}", prefixPart)
-            .replace("{tier}", tierDisplay)
-            .replace("{player}", player.getName())
-            .replace("{message}", message)
+            .replace("{tier}",      tierDisplay)
+            .replace("{player}",    player.getName())
+            .replace("{message}",   coloredMessage)
             .replace("&", "§");
     }
 }
