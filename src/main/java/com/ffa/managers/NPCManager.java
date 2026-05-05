@@ -48,66 +48,64 @@ public class NPCManager implements Listener {
         plugin.getLogger().info("Kit NPC spawned at " + loc);
     }
 
-    private void killAllKitNPCs() {
-        for (World w : Bukkit.getWorlds()) {
-            for (Entity e : w.getEntities()) {
-                if (e instanceof Breeze && NPC_NAME.equals(e.getCustomName())) {
-                    e.remove();
+   // Check every 30 seconds
+
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+
+            if (npcSavedLocation == null) return;
+
+            boolean found = false;
+
+            for (Entity e : npcSavedLocation.getWorld().getEntities()) {
+
+                if (e instanceof Breeze && NPC_NAME.equals(e.getCustomName()) && e.isValid()) {
+
+                    found = true;
+
+                    break;
+
                 }
+
             }
+
+            if (!found) spawnNPC(npcSavedLocation);
+
+        }, 600L, 600L);
+
+    }
+
+    private void killAllNPCs() {
+
+        for (World w : Bukkit.getWorlds()) {
+
+            for (Entity e : w.getEntities()) {
+
+                if (e instanceof Husk && NPC_NAME.equals(e.getCustomName())) {
+
+                    e.remove();
+
+                }
+
+            }
+
         }
+
     }
 
     public void removeNPC() {
-        killAllKitNPCs();
-        savedLocation = null;
-        clearNPCData();
+
+        killAllNPCs();
+
+        npcSavedLocation = null;
+
     }
 
-    public void restoreNPC() {
-        if (!npcConfig.contains("world")) return;
-        World world = Bukkit.getWorld(npcConfig.getString("world", "world"));
-        if (world == null) return;
-        Location loc = new Location(world,
-            npcConfig.getDouble("x"), npcConfig.getDouble("y"), npcConfig.getDouble("z"),
-            (float) npcConfig.getDouble("yaw"), 0);
-        savedLocation = loc.clone();
+    public boolean isNPC(Entity entity) {
 
-        // Kill any stray ones then spawn fresh
-        Bukkit.getScheduler().runTaskLater(plugin, () -> spawnNPC(loc), 40L);
+        if (entity == null) return false;
 
-        // Check every 30 seconds
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (savedLocation == null) return;
-            boolean found = false;
-            for (Entity e : savedLocation.getWorld().getEntities()) {
-                if (e instanceof Breeze && NPC_NAME.equals(e.getCustomName()) && e.isValid()) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) spawnNPC(savedLocation);
-        }, 600L, 600L);
-    }
+        return entity instanceof Husk && NPC_NAME.equals(entity.getCustomName());
 
-    @EventHandler
-    public void onChunkLoad(ChunkLoadEvent event) {
-        if (savedLocation == null) return;
-        if (!event.getWorld().equals(savedLocation.getWorld())) return;
-        Chunk npcChunk = savedLocation.getChunk();
-        if (event.getChunk().getX() == npcChunk.getX() && event.getChunk().getZ() == npcChunk.getZ()) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (savedLocation == null) return;
-                boolean found = false;
-                for (Entity e : savedLocation.getWorld().getEntities()) {
-                    if (e instanceof Breeze && NPC_NAME.equals(e.getCustomName()) && e.isValid()) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) spawnNPC(savedLocation);
-            }, 10L);
-        }
     }
 
     public boolean isNPC(Entity entity) {
