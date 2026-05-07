@@ -84,7 +84,6 @@ public class RandomTeleportManager {
         dataConfig.set("npc.yaw", (double) loc.getYaw());
         saveData();
 
-
     private void killAllRTPNPCs() {
         for (World w : Bukkit.getWorlds()) {
             for (Entity e : w.getEntities()) {
