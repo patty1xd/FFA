@@ -63,7 +63,6 @@ public class FFAPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ArenaProtectListener(this),this);
         getServer().getPluginManager().registerEvents(normalizationManager,           this);
         getServer().getPluginManager().registerEvents(spawnManager,                   this);
-        getServer().getPluginManager().registerEvents(npcManager,                     this);
         getServer().getPluginManager().registerEvents(rankNPCManager,                 this);
         getServer().getPluginManager().registerEvents(trimsGUI,                       this);
 
