@@ -2,6 +2,7 @@ package com.ffa.managers;
 
 import com.ffa.FFAPlugin;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -82,6 +83,20 @@ public class RandomTeleportManager {
         dataConfig.set("npc.z", loc.getZ());
         dataConfig.set("npc.yaw", (double) loc.getYaw());
         saveData();
+
+        // Check every 30 seconds
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (npcSavedLocation == null) return;
+            boolean found = false;
+            for (Entity e : npcSavedLocation.getWorld().getEntities()) {
+                if (e instanceof Husk && NPC_NAME.equals(e.getCustomName()) && e.isValid()) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) spawnNPC(npcSavedLocation);
+        }, 600L, 600L);
+    }
 
     private void killAllRTPNPCs() {
         for (World w : Bukkit.getWorlds()) {
