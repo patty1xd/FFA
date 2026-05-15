@@ -41,9 +41,13 @@ public class ArenaResetManager {
         plugin.getLogger().info("Arena schematic path: " + schematicFile.getAbsolutePath());
         plugin.getLogger().info("Arena schematic exists: " + schematicFile.exists());
 
-        if (plugin.getConfig().getBoolean("arena-reset.enabled", true)) startResetTimer();
+        // Auto-reset is disabled by default — block decay handles per-block cleanup instead.
+        // Set arena-reset.enabled: true in config.yml to re-enable full periodic resets.
+        if (plugin.getConfig().getBoolean("arena-reset.enabled", false)) startResetTimer();
         if (plugin.getConfig().getBoolean("arena-cleanup.enabled", true)) startCleanupTimer();
     }
+
+    // ── Save / Reset ─────────────────────────────────────────────────
 
     public boolean saveArena() {
         RandomTeleportManager rtp = plugin.getRTPManager();
@@ -55,13 +59,13 @@ public class ArenaResetManager {
         Location c2 = rtp.getCorner2();
         try {
             BlockVector3 min = BlockVector3.at(
-                Math.min(c1.getBlockX(), c2.getBlockX()),
-                Math.min(c1.getBlockY(), c2.getBlockY()),
-                Math.min(c1.getBlockZ(), c2.getBlockZ()));
+                    Math.min(c1.getBlockX(), c2.getBlockX()),
+                    Math.min(c1.getBlockY(), c2.getBlockY()),
+                    Math.min(c1.getBlockZ(), c2.getBlockZ()));
             BlockVector3 max = BlockVector3.at(
-                Math.max(c1.getBlockX(), c2.getBlockX()),
-                Math.max(c1.getBlockY(), c2.getBlockY()),
-                Math.max(c1.getBlockZ(), c2.getBlockZ()));
+                    Math.max(c1.getBlockX(), c2.getBlockX()),
+                    Math.max(c1.getBlockY(), c2.getBlockY()),
+                    Math.max(c1.getBlockZ(), c2.getBlockZ()));
 
             CuboidRegion region = new CuboidRegion(BukkitAdapter.adapt(c1.getWorld()), min, max);
             BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
@@ -118,11 +122,16 @@ public class ArenaResetManager {
             try (EditSession editSession = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(c1.getWorld()))) {
                 ClipboardHolder holder = new ClipboardHolder(clipboard);
                 com.sk89q.worldedit.function.operation.Operation operation = holder
-                    .createPaste(editSession)
-                    .to(clipboard.getOrigin())
-                    .ignoreAirBlocks(false)
-                    .build();
+                        .createPaste(editSession)
+                        .to(clipboard.getOrigin())
+                        .ignoreAirBlocks(false)
+                        .build();
                 Operations.complete(operation);
+            }
+
+            // Clear decay-tracked blocks so they don't re-remove freshly restored blocks
+            if (plugin.getBlockDecayManager() != null) {
+                plugin.getBlockDecayManager().clearAll();
             }
             clearItemsAndArrows();
             return true;
@@ -132,6 +141,8 @@ public class ArenaResetManager {
             return false;
         }
     }
+
+    // ── Item / arrow cleanup ─────────────────────────────────────────
 
     public void clearItemsAndArrows() {
         RandomTeleportManager rtp = plugin.getRTPManager();
@@ -146,8 +157,8 @@ public class ArenaResetManager {
         for (Entity entity : world.getEntities()) {
             Location loc = entity.getLocation();
             if (loc.getX() >= minX && loc.getX() <= maxX
-                && loc.getY() >= minY && loc.getY() <= maxY
-                && loc.getZ() >= minZ && loc.getZ() <= maxZ) {
+                    && loc.getY() >= minY && loc.getY() <= maxY
+                    && loc.getZ() >= minZ && loc.getZ() <= maxZ) {
                 if (entity instanceof Item || entity instanceof Arrow) {
                     entity.remove();
                     count++;
@@ -156,10 +167,12 @@ public class ArenaResetManager {
         }
         if (count > 0) {
             String msg = plugin.getConfig().getString("arena-cleanup.message", "&7Arena items cleared.")
-                .replace("&", "§");
+                    .replace("&", "§");
             Bukkit.broadcastMessage(msg);
         }
     }
+
+    // ── Timers ───────────────────────────────────────────────────────
 
     public void startResetTimer() {
         if (resetTaskId != -1) Bukkit.getScheduler().cancelTask(resetTaskId);
@@ -176,26 +189,28 @@ public class ArenaResetManager {
                 for (int w : warnings) {
                     if (secondsLeft == w) {
                         String msg = plugin.getConfig().getString("arena-reset.warning-message",
-                            "&c⚠ Arena resetting in &f{time}&c!")
-                            .replace("{time}", w + "s").replace("&", "§");
+                                "&c⚠ Arena resetting in &f{time}&c!")
+                                .replace("{time}", w + "s").replace("&", "§");
                         Bukkit.broadcastMessage(msg);
                     }
                 }
                 if (ticksLeft <= 0) {
                     ticksLeft = intervalTicks;
                     Bukkit.broadcastMessage(plugin.getConfig().getString("arena-reset.reset-message",
-                        "&c⚠ Arena is resetting!").replace("&", "§"));
+                            "&c⚠ Arena is resetting!").replace("&", "§"));
                     Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                         if (!schematicFile.exists()) {
                             Bukkit.getScheduler().runTask(plugin, () ->
-                                Bukkit.broadcastMessage("§cArena reset failed! Run /savearena first."));
+                                    Bukkit.broadcastMessage("§cArena reset failed! Run /savearena first."));
                             return;
                         }
                         Bukkit.getScheduler().runTask(plugin, () -> {
                             boolean success = resetArena();
-                            if (success) Bukkit.broadcastMessage(plugin.getConfig().getString(
-                                "arena-reset.done-message", "&aArena has been reset!").replace("&", "§"));
-                            else Bukkit.broadcastMessage("§cArena reset failed! Check console for details.");
+                            if (success)
+                                Bukkit.broadcastMessage(plugin.getConfig().getString(
+                                        "arena-reset.done-message", "&aArena has been reset!").replace("&", "§"));
+                            else
+                                Bukkit.broadcastMessage("§cArena reset failed! Check console for details.");
                         });
                     });
                 }
@@ -207,13 +222,15 @@ public class ArenaResetManager {
         if (cleanupTaskId != -1) Bukkit.getScheduler().cancelTask(cleanupTaskId);
         int intervalSeconds = plugin.getConfig().getInt("arena-cleanup.interval-seconds", 60);
         cleanupTaskId = Bukkit.getScheduler().runTaskTimer(plugin,
-            this::clearItemsAndArrows, intervalSeconds * 20L, intervalSeconds * 20L).getTaskId();
+                this::clearItemsAndArrows, intervalSeconds * 20L, intervalSeconds * 20L).getTaskId();
     }
 
     public void stopResetTimer() {
-        if (resetTaskId != -1) { Bukkit.getScheduler().cancelTask(resetTaskId); resetTaskId = -1; }
+        if (resetTaskId   != -1) { Bukkit.getScheduler().cancelTask(resetTaskId);   resetTaskId   = -1; }
         if (cleanupTaskId != -1) { Bukkit.getScheduler().cancelTask(cleanupTaskId); cleanupTaskId = -1; }
     }
+
+    // ── Block queries ────────────────────────────────────────────────
 
     public boolean isArenaBlock(Location loc) {
         RandomTeleportManager rtp = plugin.getRTPManager();
@@ -226,8 +243,17 @@ public class ArenaResetManager {
         double minY = Math.min(c1.getY(), c2.getY()), maxY = Math.max(c1.getY(), c2.getY());
         double minZ = Math.min(c1.getZ(), c2.getZ()), maxZ = Math.max(c1.getZ(), c2.getZ());
         return loc.getX() >= minX && loc.getX() <= maxX
-            && loc.getY() >= minY && loc.getY() <= maxY
-            && loc.getZ() >= minZ && loc.getZ() <= maxZ;
+                && loc.getY() >= minY && loc.getY() <= maxY
+                && loc.getZ() >= minZ && loc.getZ() <= maxZ;
+    }
+
+    public boolean isOriginalArenaBlock(Location loc) {
+        if (!schematicFile.exists()) return false;
+        if (originalBlocks.isEmpty()) return false;
+        String key = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
+        Material saved = originalBlocks.get(key);
+        if (saved == null) return false;
+        return loc.getBlock().getType() == saved;
     }
 
     private void snapshotOriginalBlocks(Location c1, Location c2) {
@@ -249,14 +275,5 @@ public class ArenaResetManager {
                 }
             }
         }
-    }
-
-    public boolean isOriginalArenaBlock(Location loc) {
-        if (!schematicFile.exists()) return false;
-        if (originalBlocks.isEmpty()) return false;
-        String key = loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
-        Material saved = originalBlocks.get(key);
-        if (saved == null) return false;
-        return loc.getBlock().getType() == saved;
     }
 }
