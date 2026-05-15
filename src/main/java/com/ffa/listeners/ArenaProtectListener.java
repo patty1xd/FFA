@@ -1,6 +1,8 @@
 package com.ffa.listeners;
 
 import com.ffa.FFAPlugin;
+import com.ffa.managers.BlockDecayManager;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -21,11 +23,20 @@ public class ArenaProtectListener implements Listener {
         Player player = event.getPlayer();
         if (player.hasPermission("ffa.admin")) return;
 
-        // Only cancel if this specific block was part of the original saved arena
-        if (!plugin.getArenaResetManager().isOriginalArenaBlock(event.getBlock().getLocation())) return;
+        Location loc = event.getBlock().getLocation();
 
-        event.setCancelled(true);
-        player.sendMessage("§cYou cannot break original arena blocks!");
+        // Player-placed blocks (tracked by BlockDecayManager) can always be broken early
+        BlockDecayManager bdm = plugin.getBlockDecayManager();
+        if (bdm != null && bdm.isTracked(loc)) {
+            bdm.removeTracked(loc);
+            return;
+        }
+
+        // Original arena blocks are protected
+        if (plugin.getArenaResetManager().isOriginalArenaBlock(loc)) {
+            event.setCancelled(true);
+            player.sendMessage("§cYou cannot break original arena blocks!");
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -33,10 +44,11 @@ public class ArenaProtectListener implements Listener {
         Player player = event.getPlayer();
         if (player.hasPermission("ffa.admin")) return;
 
-        // Prevent placing blocks that would overwrite an original arena block
-        if (!plugin.getArenaResetManager().isOriginalArenaBlock(event.getBlock().getLocation())) return;
-
-        event.setCancelled(true);
-        player.sendMessage("§cYou cannot place blocks over original arena blocks!");
+        // Prevent placing blocks directly over an original arena block position
+        if (plugin.getArenaResetManager().isOriginalArenaBlock(event.getBlock().getLocation())) {
+            event.setCancelled(true);
+            player.sendMessage("§cYou cannot place blocks over original arena blocks!");
+        }
+        // Non-original positions are allowed — BlockDecayManager will handle their timed removal
     }
 }
