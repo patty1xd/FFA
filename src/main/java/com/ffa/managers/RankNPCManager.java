@@ -11,17 +11,15 @@ import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Witch;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 public class RankNPCManager implements Listener {
 
@@ -29,72 +27,98 @@ public class RankNPCManager implements Listener {
     private static final String NPC_NAME = "§d§lRANKS";
 
     private Location savedLocation;
+    private UUID npcUUID;
+    private boolean respawnScheduled = false;
     private File dataFile;
     private FileConfiguration dataConfig;
 
     public RankNPCManager(FFAPlugin plugin) {
         this.plugin = plugin;
         loadData();
+        startWatchdog();
     }
+
+    // ── Spawn / Remove ───────────────────────────────────────────────
 
     public void spawnNPC(Location loc) {
         savedLocation = loc.clone();
-        killAllRankNPCs();
+        removeExistingNPC();
 
-        Witch npc = (Witch) loc.getWorld().spawnEntity(loc, EntityType.WITCH);
-        npc.setCustomName(NPC_NAME);
-        npc.setCustomNameVisible(true);
-        npc.setAI(false);
-        npc.setInvulnerable(true);
-        npc.setSilent(true);
-        npc.setPersistent(true);
-        npc.setRemoveWhenFarAway(false);
+        Witch npc = loc.getWorld().spawn(loc, Witch.class, entity -> {
+            entity.setCustomName(NPC_NAME);
+            entity.setCustomNameVisible(true);
+            entity.setAI(false);
+            entity.setGravity(false);
+            entity.setInvulnerable(true);
+            entity.setSilent(true);
+            entity.setPersistent(true);
+            entity.setRemoveWhenFarAway(false);
+        });
 
+        npcUUID = npc.getUniqueId();
+        keepChunkLoaded(loc);
         saveData(loc);
-
-        // Check every 30 seconds — same as RTP NPC
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (savedLocation == null) return;
-            boolean found = false;
-            for (Entity e : savedLocation.getWorld().getEntities()) {
-                if (e instanceof Witch && NPC_NAME.equals(e.getCustomName()) && e.isValid()) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) spawnNPC(savedLocation);
-        }, 600L, 600L);
-    }
-
-    private void killAllRankNPCs() {
-        for (World w : Bukkit.getWorlds()) {
-            for (Entity e : w.getEntities()) {
-                if (e instanceof Witch && NPC_NAME.equals(e.getCustomName())) {
-                    e.remove();
-                }
-            }
-        }
     }
 
     public void removeNPC() {
-        killAllRankNPCs();
+        releaseChunkTicket();
+        removeExistingNPC();
         savedLocation = null;
         clearData();
     }
 
+    // ── Restore on startup ───────────────────────────────────────────
+
     public void restoreNPC() {
         if (!dataConfig.contains("world")) return;
+
+        if (dataConfig.contains("uuid")) {
+            try {
+                UUID uuid = UUID.fromString(dataConfig.getString("uuid", ""));
+                Entity entity = Bukkit.getEntity(uuid);
+                if (entity instanceof Witch && entity.isValid()) {
+                    npcUUID = uuid;
+                    savedLocation = entity.getLocation().clone();
+                    Witch witch = (Witch) entity;
+                    witch.setAI(false);
+                    witch.setGravity(false);
+                    witch.setInvulnerable(true);
+                    witch.setSilent(true);
+                    witch.setPersistent(true);
+                    witch.setRemoveWhenFarAway(false);
+                    keepChunkLoaded(savedLocation);
+                    return;
+                }
+            } catch (IllegalArgumentException ignored) {}
+        }
+
         World world = Bukkit.getWorld(dataConfig.getString("world", "world"));
         if (world == null) return;
         Location loc = new Location(world,
-            dataConfig.getDouble("x"), dataConfig.getDouble("y"), dataConfig.getDouble("z"),
-            (float) dataConfig.getDouble("yaw"), 0);
+                dataConfig.getDouble("x"), dataConfig.getDouble("y"), dataConfig.getDouble("z"),
+                (float) dataConfig.getDouble("yaw"), 0);
         Bukkit.getScheduler().runTaskLater(plugin, () -> spawnNPC(loc), 40L);
     }
 
+    // ── Death callback (called by NPCProtectListener) ────────────────
+
+    public void onEntityDeath() {
+        npcUUID = null;
+        if (savedLocation != null && !respawnScheduled) {
+            respawnScheduled = true;
+            Location loc = savedLocation.clone();
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                respawnScheduled = false;
+                spawnNPC(loc);
+            }, 40L);
+        }
+    }
+
+    // ── Identification ───────────────────────────────────────────────
+
     public boolean isNPC(Entity entity) {
-        if (entity == null) return false;
-        return entity instanceof Witch && NPC_NAME.equals(entity.getCustomName());
+        if (entity == null || npcUUID == null) return false;
+        return npcUUID.equals(entity.getUniqueId());
     }
 
     // ── Events ──────────────────────────────────────────────────────
@@ -114,24 +138,54 @@ public class RankNPCManager implements Listener {
         player.sendMessage("§8[§d§lRANKS§8] §7URL: §d" + url);
     }
 
-    @EventHandler
-    public void onDamage(EntityDamageEvent event) {
-        if (isNPC(event.getEntity())) event.setCancelled(true);
+    // ── Internal helpers ─────────────────────────────────────────────
+
+    private void startWatchdog() {
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (savedLocation == null || npcUUID == null) return;
+            Entity entity = Bukkit.getEntity(npcUUID);
+            if (entity == null || !entity.isValid()) {
+                spawnNPC(savedLocation);
+            }
+        }, 600L, 600L);
     }
 
-    @EventHandler
-    public void onTarget(EntityTargetEvent event) {
-        if (isNPC(event.getEntity())) event.setCancelled(true);
+    private void removeExistingNPC() {
+        if (npcUUID != null) {
+            Entity e = Bukkit.getEntity(npcUUID);
+            if (e != null) e.remove();
+            npcUUID = null;
+        }
+        // Safety net: kill any stray witch with the rank NPC name
+        for (World w : Bukkit.getWorlds()) {
+            for (Entity e : w.getEntities()) {
+                if (e instanceof Witch && NPC_NAME.equals(e.getCustomName())) {
+                    e.remove();
+                }
+            }
+        }
+    }
+
+    private void keepChunkLoaded(Location loc) {
+        loc.getWorld().addPluginChunkTicket(loc.getBlockX() >> 4, loc.getBlockZ() >> 4, plugin);
+    }
+
+    private void releaseChunkTicket() {
+        if (savedLocation != null) {
+            savedLocation.getWorld().removePluginChunkTicket(
+                    savedLocation.getBlockX() >> 4, savedLocation.getBlockZ() >> 4, plugin);
+        }
     }
 
     // ── Persistence ──────────────────────────────────────────────────
 
     private void saveData(Location loc) {
+        dataConfig.set("uuid",  npcUUID != null ? npcUUID.toString() : null);
         dataConfig.set("world", loc.getWorld().getName());
-        dataConfig.set("x",   loc.getX());
-        dataConfig.set("y",   loc.getY());
-        dataConfig.set("z",   loc.getZ());
-        dataConfig.set("yaw", (double) loc.getYaw());
+        dataConfig.set("x",     loc.getX());
+        dataConfig.set("y",     loc.getY());
+        dataConfig.set("z",     loc.getZ());
+        dataConfig.set("yaw",   (double) loc.getYaw());
         try { dataConfig.save(dataFile); } catch (IOException e) { e.printStackTrace(); }
     }
 
@@ -146,6 +200,7 @@ public class RankNPCManager implements Listener {
 
     private void clearData() {
         dataConfig.set("world", null);
+        dataConfig.set("uuid",  null);
         try { dataConfig.save(dataFile); } catch (IOException e) { e.printStackTrace(); }
     }
 }
