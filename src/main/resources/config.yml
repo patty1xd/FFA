@@ -1,6 +1,10 @@
 scoreboard-update-interval: 20
 normalization-check-interval: 40
 
+# How many seconds before a player-placed block (or water/lava) disappears inside the arena.
+# Set to 0 to disable block decay entirely.
+block-decay-seconds: 60
+
 # TAB list settings
 tab:
   header: "§5§l✦ KOALAFFA §5§l✦\n§7Play and climb the tiers!"
@@ -40,7 +44,6 @@ npc:
 # Kill progress restrictions per tier matchup
 # killer-tier -> victim-tier -> action
 # action: "full", "none", or "reduced: X" (X = kills to give, can be decimal like 0.5)
-# Example: tier 5 killing tier 1 gives no progress
 kill-restrictions:
   5:
     1: "none"
@@ -228,7 +231,7 @@ tiers:
           UNBREAKING: 3
           MENDING: 1
 
-          # Kill streak settings
+# Kill streak settings
 streaks:
   milestones:
     - 5
@@ -248,12 +251,7 @@ spawn:
 
 # Death consequences per tier matchup
 # victim-tier -> killer-tier -> action
-# Actions:
-#   "lose-tier"        — drop one tier (default behavior)
-#   "lose-progress"    — reset kill progress but keep tier
-#   "nothing"          — no penalty at all
-# Example: tier 1 dying to tier 5 loses a tier
-# Example: tier 3 dying to tier 1 only loses progress (no tier drop)
+# Actions: "lose-tier", "lose-progress", "nothing"
 death-consequences:
   1:
     1: "lose-tier"
@@ -298,9 +296,11 @@ death-consequences:
     5: "lose-tier"
     6: "lose-tier"
 
-# Arena auto-reset settings
+# Arena auto-reset — disabled by default.
+# Block decay (block-decay-seconds above) handles per-block cleanup instead.
+# Set enabled: true here only if you also want full periodic arena restoration.
 arena-reset:
-  enabled: true
+  enabled: false
   interval-minutes: 15
   warning-seconds:
     - 60
@@ -311,14 +311,13 @@ arena-reset:
   reset-message: "&c⚠ Arena is resetting!"
   done-message: "&aArena has been reset!"
 
-# Arena item/arrow cleanup
+# Arena item/arrow cleanup (independent of block decay)
 arena-cleanup:
   enabled: true
   interval-seconds: 60
   message: "&7Arena items cleared."
 
-  # RANKS NPC settings
+# RANKS NPC settings
 rank-npc:
   # The URL players are sent when they right-click the RANKS witch NPC
   store-url: "https://your-store.tebex.io"
-
