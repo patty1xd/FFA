@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.inventory.EquipmentSlot;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,13 +21,15 @@ public class NPCInteractListener implements Listener {
 
     @EventHandler
     public void onInteract(PlayerInteractEntityEvent event) {
+        // Fires once per hand — ignore the off-hand duplicate
+        if (event.getHand() != EquipmentSlot.HAND) return;
+
         Player player = event.getPlayer();
 
         // Kit NPC
         if (plugin.getNPCManager().isNPC(event.getRightClicked())) {
             event.setCancelled(true);
 
-            // Check cooldown
             long now = System.currentTimeMillis();
             Long last = kitCooldowns.get(player.getUniqueId());
             if (last != null && now - last < KIT_COOLDOWN_SECONDS * 1000L) {
