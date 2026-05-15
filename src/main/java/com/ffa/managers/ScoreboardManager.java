@@ -48,7 +48,7 @@ public class ScoreboardManager {
             setLine(obj, "§4§l☠ MAX TIER ☠", line--);
         }
         setLine(obj, "§8▬▬▬▬▬▬▬▬▬▬▬▬ ", line--);
-        setLine(obj, "§ftierstermc.ungsp.foo", line--);
+        setLine(obj, "§fplay.tierster.xyz", line--);
 
         player.setScoreboard(board);
 
