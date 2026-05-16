@@ -134,8 +134,6 @@ public class RankNPCManager implements Listener {
         Component link = Component.text("  ➜ Click here to buy a rank!", NamedTextColor.LIGHT_PURPLE)
                 .decorate(TextDecoration.UNDERLINED)
                 .clickEvent(ClickEvent.openUrl(url));
-        player.sendMessage(link);
-        player.sendMessage("§8[§d§lRANKS§8] §7URL: §d" + url);
     }
 
     // ── Internal helpers ─────────────────────────────────────────────
