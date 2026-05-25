@@ -47,8 +47,9 @@ public class PlayerJoinListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        plugin.getTierManager().saveAll();
-        plugin.getStatsManager().saveAll();
+        // Sync saveAll() on every quit caused main-thread disk I/O hitches and
+        // raced the async 5-min auto-save writing the same FileConfiguration.
+        // The async timer + onDisable() flush are enough.
         plugin.getChatManager().clearPlayer(event.getPlayer().getUniqueId());
         String tierDisplay = plugin.getTierManager().getTierDisplay(
             plugin.getTierManager().getTier(event.getPlayer().getUniqueId()));
@@ -60,10 +61,11 @@ public class PlayerJoinListener implements Listener {
         event.setQuitMessage(msg);
     }
 
-    // NORMAL priority (default) — runs after LOW priority filter has had its chance to cancel
-    @EventHandler(priority = EventPriority.NORMAL)
+    // HIGH priority so TrimsGUI's NORMAL handler can consume the chat first
+    // when the player is mid-flow on /trims sword-name input — otherwise the
+    // secret sword name leaks to global chat before TrimsGUI cancels it.
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onChat(AsyncPlayerChatEvent event) {
-        if (event.isCancelled()) return;
         event.setCancelled(true);
         String formatted = plugin.getChatManager().formatChat(event.getPlayer(), event.getMessage());
         event.getPlayer().getServer().broadcastMessage(formatted);
