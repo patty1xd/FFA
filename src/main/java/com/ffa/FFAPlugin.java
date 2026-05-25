@@ -67,6 +67,7 @@ public class FFAPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(normalizationManager,           this);
         getServer().getPluginManager().registerEvents(spawnManager,                   this);
         getServer().getPluginManager().registerEvents(rankNPCManager,                 this);
+        getServer().getPluginManager().registerEvents(scoreboardManager,              this);
         getServer().getPluginManager().registerEvents(trimsGUI,                       this);
 
         // ── Commands ──────────────────────────────────────────────────
