@@ -105,10 +105,31 @@ public class RandomTeleportManager {
         saveData();
     }
 
+    /**
+     * Soft-remove used by onDisable() — preserves arena.yml so the husk
+     * respawns next boot.
+     */
     public void removeNPC() {
         releaseChunkTicket();
         removeExistingNPC();
+        // intentionally NOT nulling npcSavedLocation or clearing npc.* on shutdown.
+    }
+
+    /**
+     * Hard-delete used by /removearnanpc — also wipes npc.* keys so the
+     * removed NPC doesn't reappear on next restart.
+     */
+    public void deleteNPC() {
+        releaseChunkTicket();
+        removeExistingNPC();
         npcSavedLocation = null;
+        dataConfig.set("npc.uuid",  null);
+        dataConfig.set("npc.world", null);
+        dataConfig.set("npc.x",     null);
+        dataConfig.set("npc.y",     null);
+        dataConfig.set("npc.z",     null);
+        dataConfig.set("npc.yaw",   null);
+        saveData();
     }
 
     // ── Death callback (called by NPCProtectListener) ────────────────

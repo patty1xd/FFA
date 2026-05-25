@@ -4,18 +4,27 @@ import com.ffa.FFAPlugin;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scoreboard.*;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class ScoreboardManager {
+public class ScoreboardManager implements Listener {
 
     private final FFAPlugin plugin;
     private final Map<UUID, Scoreboard> boards = new HashMap<>();
 
     public ScoreboardManager(FFAPlugin plugin) { this.plugin = plugin; }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        // Prevent unbounded growth of the per-UUID scoreboard cache.
+        boards.remove(event.getPlayer().getUniqueId());
+    }
 
     public void startUpdater() {
         int interval = plugin.getConfig().getInt("scoreboard-update-interval", 20);

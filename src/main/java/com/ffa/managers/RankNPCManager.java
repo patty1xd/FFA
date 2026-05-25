@@ -16,6 +16,7 @@ import org.bukkit.entity.Witch;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.inventory.EquipmentSlot;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,7 +61,20 @@ public class RankNPCManager implements Listener {
         saveData(loc);
     }
 
+    /**
+     * Soft-remove used by onDisable() — kills the entity + releases the chunk
+     * ticket but PRESERVES ranknpc.yml so restoreNPC() can rebuild it next boot.
+     */
     public void removeNPC() {
+        releaseChunkTicket();
+        removeExistingNPC();
+        // intentionally NOT clearing savedLocation or persistence on shutdown.
+    }
+
+    /**
+     * Hard-delete used by /removeranknpc — kills entity AND wipes ranknpc.yml.
+     */
+    public void deleteNPC() {
         releaseChunkTicket();
         removeExistingNPC();
         savedLocation = null;
@@ -125,6 +139,9 @@ public class RankNPCManager implements Listener {
 
     @EventHandler
     public void onInteract(PlayerInteractEntityEvent event) {
+        // PlayerInteractEntityEvent fires once per hand — ignore off-hand so the
+        // store-URL block isn't sent twice per right-click.
+        if (event.getHand() != EquipmentSlot.HAND) return;
         if (!isNPC(event.getRightClicked())) return;
         event.setCancelled(true);
         Player player = event.getPlayer();

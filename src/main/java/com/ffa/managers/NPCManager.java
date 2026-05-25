@@ -53,7 +53,22 @@ public class NPCManager {
         saveNPCData(loc);
     }
 
+    /**
+     * Soft-remove used by onDisable() — kills the entity + releases the chunk
+     * ticket but PRESERVES npc.yml so restoreNPC() can rebuild it on next boot.
+     */
     public void removeNPC() {
+        releaseChunkTicket();
+        removeExistingNPC();
+        // intentionally NOT clearing savedLocation or persistence:
+        // the server is shutting down and we want the NPC back next start.
+    }
+
+    /**
+     * Hard-delete used by /removenpc — kills the entity, releases the ticket
+     * AND wipes npc.yml so the NPC stays gone across restarts.
+     */
+    public void deleteNPC() {
         releaseChunkTicket();
         removeExistingNPC();
         savedLocation = null;

@@ -151,6 +151,16 @@ public class NormalizationManager implements Listener {
         return SWORD_MATERIALS.contains(item.getType());
     }
 
+    /** Safe Material.valueOf — logs once and returns null on typo. */
+    private Material safeMaterial(String name) {
+        if (name == null) return null;
+        try { return Material.valueOf(name); }
+        catch (IllegalArgumentException ex) {
+            plugin.getLogger().warning("Unknown material in config: '" + name + "'");
+            return null;
+        }
+    }
+
     private ItemStack normalizeArmor(ItemStack item, int tier, int slot) {
         String slotName = switch (slot) {
             case 0 -> "boots";
@@ -162,7 +172,8 @@ public class NormalizationManager implements Listener {
         if (slotName == null) return null;
         String expectedMat = plugin.getConfig().getString(
             "tiers." + tier + ".kit." + slotName + ".material", "DIAMOND_HELMET");
-        if (item.getType() == Material.valueOf(expectedMat)) return null;
+        Material expected = safeMaterial(expectedMat);
+        if (expected != null && item.getType() == expected) return null;
         return buildNormalizedArmor(slotName, tier);
     }
 
@@ -176,14 +187,16 @@ public class NormalizationManager implements Listener {
         if (slotName == null) return null;
         String expectedMat = plugin.getConfig().getString(
             "tiers." + tier + ".kit." + slotName + ".material", "DIAMOND_HELMET");
-        if (item.getType() == Material.valueOf(expectedMat)) return null;
+        Material expected = safeMaterial(expectedMat);
+        if (expected != null && item.getType() == expected) return null;
         return buildNormalizedArmor(slotName, tier);
     }
 
     private ItemStack normalizeSword(ItemStack item, int tier) {
         String expectedMat = plugin.getConfig().getString(
             "tiers." + tier + ".kit.sword.material", "DIAMOND_SWORD");
-        if (item.getType() == Material.valueOf(expectedMat)) return null;
+        Material expected = safeMaterial(expectedMat);
+        if (expected != null && item.getType() == expected) return null;
         return buildNormalizedSword(tier);
     }
 
