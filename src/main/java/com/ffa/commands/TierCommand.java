@@ -1,5 +1,6 @@
 package com.ffa.commands;
 import com.ffa.FFAPlugin;
+import com.ffa.managers.TierManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -14,7 +15,7 @@ public class TierCommand implements CommandExecutor {
         int kills = plugin.getTierManager().getTierKills(p.getUniqueId());
         int needed = plugin.getTierManager().getKillsNeeded(tier);
         p.sendMessage("§8[§6FFA§8] §7Tier: " + plugin.getTierManager().getTierDisplay(tier));
-        if (tier < 5) p.sendMessage("§8[§6FFA§8] §7Progress: §e" + kills + "§7/§e" + needed + " kills");
+        if (tier < TierManager.MAX_TIER) p.sendMessage("§8[§6FFA§8] §7Progress: §e" + kills + "§7/§e" + needed + " kills");
         else p.sendMessage("§8[§6FFA§8] §6§lMAX TIER ★");
         return true;
     }

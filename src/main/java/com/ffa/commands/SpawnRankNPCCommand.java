@@ -31,7 +31,7 @@ public class SpawnRankNPCCommand implements CommandExecutor {
             plugin.getRankNPCManager().spawnNPC(player.getLocation());
             sender.sendMessage("§8[§6FFA§8] §aRANKS NPC spawned at your location.");
         } else if (command.getName().equalsIgnoreCase("removeranknpc")) {
-            plugin.getRankNPCManager().removeNPC();
+            plugin.getRankNPCManager().deleteNPC();
             sender.sendMessage("§8[§6FFA§8] §cRANKS NPC removed.");
         }
         return true;

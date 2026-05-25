@@ -9,7 +9,7 @@ public class RemoveNPCCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!sender.hasPermission("ffa.admin")) { sender.sendMessage("§cNo permission."); return true; }
-        plugin.getNPCManager().removeNPC();
+        plugin.getNPCManager().deleteNPC();
         sender.sendMessage("§aKit NPC removed.");
         return true;
     }

@@ -33,7 +33,7 @@ public class ArenaCommand implements CommandExecutor {
                 sender.sendMessage("§aArena NPC spawned!");
             }
             case "removearnanpc" -> {
-                plugin.getRTPManager().removeNPC();
+                plugin.getRTPManager().deleteNPC();
                 sender.sendMessage("§cArena NPC removed.");
             }
             case "savearena" -> {
