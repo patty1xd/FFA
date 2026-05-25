@@ -374,7 +374,9 @@ public class TrimsGUI implements Listener {
         if (patStart + centerSlots.length < ALL_BANNER_PATTERNS.size())
             inv.setItem(51, makeItem(Material.ARROW, "§7Next Patterns →"));
 
-        inv.setItem(45, makeItem(Material.BARRIER, "§cBack to Menu"));
+        // Slot 45 is reserved for the base-color paging arrow when paging is
+        // needed; put Back-to-Menu next to it so the arrow isn't overwritten.
+        inv.setItem(46, makeItem(Material.BARRIER, "§cBack to Menu"));
 
         int patColorPage = shieldPatColorPage.getOrDefault(uuid, 0);
         int patColorStart = patColorPage * 4;
