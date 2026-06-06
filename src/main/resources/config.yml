@@ -41,52 +41,35 @@ messages:
 npc:
   name: "§6§lKit"
 
-# Kill progress restrictions per tier matchup
-# killer-tier -> victim-tier -> action
-# action: "full", "none", or "reduced: X" (X = kills to give, can be decimal like 0.5)
+# ── What the KILLER gains, per tier matchup ─────────────────────────────────
+# kill-restrictions.<killer-tier>.<victim-tier>: "<action>"
+# Actions (the three options you asked for):
+#   "progress:1"  -> normal 1 kill of progress toward the next tier
+#   "tier:1"      -> whole-tier progress (instantly bumps the killer up a full tier)
+#   "none"        -> no kill progress at all
+# (Advanced: "progress:0.5" gives a fraction, "tier:2" jumps two tiers — optional.)
+# Note: tier 4 is the max tier, so a tier-4 killer never gains progress regardless.
 kill-restrictions:
-  5:
+  1:
+    1: "progress:1"
+    2: "progress:1"
+    3: "progress:1"
+    4: "progress:1"
+  2:
+    1: "none"
+    2: "progress:1"
+    3: "progress:1"
+    4: "progress:1"
+  3:
     1: "none"
     2: "none"
-    3: "reduced:0.5"
-    4: "full"
-    5: "full"
-    6: "full"
+    3: "progress:1"
+    4: "progress:1"
   4:
-    1: "none"
-    2: "reduced:0.5"
-    3: "full"
-    4: "full"
-    5: "full"
-    6: "full"
-  3:
-    1: "reduced:0.5"
-    2: "full"
-    3: "full"
-    4: "full"
-    5: "full"
-    6: "full"
-  2:
-    1: "full"
-    2: "full"
-    3: "full"
-    4: "full"
-    5: "full"
-    6: "full"
-  1:
-    1: "full"
-    2: "full"
-    3: "full"
-    4: "full"
-    5: "full"
-    6: "full"
-  6:
     1: "none"
     2: "none"
     3: "none"
-    4: "reduced:0.5"
-    5: "full"
-    6: "full"
+    4: "none"
 
 # Tier settings
 tiers:
@@ -94,6 +77,8 @@ tiers:
     display: "§7[T1]"
     kills-to-advance: 5
     kit:
+      # Splash instant health potion level filling the kit's free slots (2 = Instant Health II).
+      health-potion-level: 2
       helmet:
         material: DIAMOND_HELMET
         enchants:
@@ -129,6 +114,7 @@ tiers:
     display: "§a[T2]"
     kills-to-advance: 8
     kit:
+      health-potion-level: 2
       helmet:
         material: DIAMOND_HELMET
         enchants:
@@ -164,6 +150,7 @@ tiers:
     display: "§b[T3]"
     kills-to-advance: 12
     kit:
+      health-potion-level: 1
       helmet:
         material: DIAMOND_HELMET
         enchants:
@@ -199,6 +186,7 @@ tiers:
     display: "§6§l[T4☠]"
     kills-to-advance: 0
     kit:
+      health-potion-level: 1
       helmet:
         material: DIAMOND_HELMET
         enchants:
@@ -249,52 +237,33 @@ spawn:
   teleported-message: "&aTeleported to spawn!"
   in-combat-message: "&cYou cannot use /spawn while in combat!"
 
-# Death consequences per tier matchup
-# victim-tier -> killer-tier -> action
-# Actions: "lose-tier", "lose-progress", "nothing"
+# ── What the VICTIM loses when they die, per tier matchup ───────────────────
+# death-consequences.<victim-tier>.<killer-tier>: "<action>"
+# Actions (the three options you asked for):
+#   "lose-progress" -> reset kill progress toward the next tier (keep current tier)
+#   "lose-tier"     -> drop down one full tier (tier 1 just resets progress)
+#   "nothing"       -> no penalty at all
 death-consequences:
   1:
-    1: "lose-tier"
-    2: "lose-tier"
-    3: "lose-tier"
-    4: "lose-tier"
-    5: "lose-tier"
-    6: "lose-tier"
+    1: "lose-progress"
+    2: "lose-progress"
+    3: "lose-progress"
+    4: "lose-progress"
   2:
     1: "lose-tier"
     2: "lose-tier"
-    3: "lose-tier"
-    4: "lose-tier"
-    5: "lose-tier"
-    6: "lose-tier"
+    3: "lose-progress"
+    4: "lose-progress"
   3:
-    1: "lose-progress"
+    1: "lose-tier"
+    2: "lose-tier"
+    3: "lose-tier"
+    4: "lose-progress"
+  4:
+    1: "lose-tier"
     2: "lose-tier"
     3: "lose-tier"
     4: "lose-tier"
-    5: "lose-tier"
-    6: "lose-tier"
-  4:
-    1: "lose-progress"
-    2: "lose-progress"
-    3: "lose-tier"
-    4: "lose-tier"
-    5: "lose-tier"
-    6: "lose-tier"
-  5:
-    1: "nothing"
-    2: "lose-progress"
-    3: "lose-progress"
-    4: "lose-tier"
-    5: "lose-tier"
-    6: "lose-tier"
-  6:
-    1: "nothing"
-    2: "nothing"
-    3: "lose-progress"
-    4: "lose-progress"
-    5: "lose-tier"
-    6: "lose-tier"
 
 # Arena auto-reset — disabled by default.
 # Block decay (block-decay-seconds above) handles per-block cleanup instead.
