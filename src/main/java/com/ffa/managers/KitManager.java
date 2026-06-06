@@ -9,6 +9,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionType;
 
 import java.util.List;
 
@@ -47,9 +48,6 @@ public class KitManager {
 
         // Axe
         player.getInventory().setItem(2, buildAxe(tier));
-
-        // Pickaxe
-        player.getInventory().setItem(3, buildPickaxe());
 
         // 128 golden apples
         player.getInventory().setItem(4, new ItemStack(Material.GOLDEN_APPLE, 64));
@@ -90,6 +88,16 @@ public class KitManager {
         // 3 strength potions
         for (int i = 22; i <= 24; i++) {
             player.getInventory().setItem(i, buildPotion(PotionEffectType.STRENGTH, 1, 9600, 1));
+        }
+
+        // Fill every remaining empty storage slot (incl. the freed pickaxe slot)
+        // with splash instant health potions at this tier's allowed level.
+        ItemStack healthPotion = buildHealthPotion(tier);
+        for (int i = 0; i < 36; i++) {
+            ItemStack existing = player.getInventory().getItem(i);
+            if (existing == null || existing.getType() == Material.AIR) {
+                player.getInventory().setItem(i, healthPotion.clone());
+            }
         }
 
         String tierDisplay = plugin.getTierManager().getTierDisplay(tier);
@@ -249,15 +257,22 @@ public class KitManager {
         return axe;
     }
 
-    private ItemStack buildPickaxe() {
-        ItemStack pick = new ItemStack(Material.DIAMOND_PICKAXE);
-        ItemMeta m = pick.getItemMeta();
-        m.addEnchant(Enchantment.EFFICIENCY, 5, true);
-        m.addEnchant(Enchantment.SILK_TOUCH, 1, true);
-        m.addEnchant(Enchantment.UNBREAKING, 3, true);
-        m.addEnchant(Enchantment.MENDING, 1, true);
-        pick.setItemMeta(m);
-        return pick;
+    /**
+     * Splash instant health potion at the level configured for the given tier.
+     * tiers.&lt;tier&gt;.kit.health-potion-level: 2 → Instant Health II, 1 → Instant Health I.
+     */
+    public ItemStack buildHealthPotion(int tier) {
+        int level = plugin.getConfig().getInt("tiers." + tier + ".kit.health-potion-level", 1);
+        return buildHealthPotionLevel(level);
+    }
+
+    /** Builds a splash instant health potion at the given level (2 = strong, else level 1). */
+    public ItemStack buildHealthPotionLevel(int level) {
+        ItemStack potion = new ItemStack(Material.SPLASH_POTION);
+        PotionMeta meta = (PotionMeta) potion.getItemMeta();
+        meta.setBasePotionType(level >= 2 ? PotionType.STRONG_HEALING : PotionType.HEALING);
+        potion.setItemMeta(meta);
+        return potion;
     }
 
     private ItemStack buildPotion(PotionEffectType type, int amplifier, int duration, int amount) {

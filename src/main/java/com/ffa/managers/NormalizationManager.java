@@ -11,6 +11,8 @@ import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ArmorMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionType;
 
 import java.util.Set;
 
@@ -99,6 +101,9 @@ public class NormalizationManager implements Listener {
                 if (normalized != null) { player.getInventory().setItem(i, normalized); changed = true; }
             } else if (isKoalaSword(item)) {
                 ItemStack normalized = normalizeSword(item, tier);
+                if (normalized != null) { player.getInventory().setItem(i, normalized); changed = true; }
+            } else if (item.getType() == Material.SPLASH_POTION) {
+                ItemStack normalized = normalizePotion(item, tier);
                 if (normalized != null) { player.getInventory().setItem(i, normalized); changed = true; }
             }
         }
@@ -190,6 +195,30 @@ public class NormalizationManager implements Listener {
         Material expected = safeMaterial(expectedMat);
         if (expected != null && item.getType() == expected) return null;
         return buildNormalizedArmor(slotName, tier);
+    }
+
+    /**
+     * Normalizes a splash instant health potion to the level allowed for the player's tier,
+     * exactly like armor: a tier-4 player holding an Instant Health II potion has it changed
+     * to Instant Health I, and vice-versa. Other splash potions (speed, strength, etc.) are
+     * left untouched. Returns null if no change is needed.
+     */
+    private ItemStack normalizePotion(ItemStack item, int tier) {
+        if (item.getType() != Material.SPLASH_POTION) return null;
+        if (!(item.getItemMeta() instanceof PotionMeta meta)) return null;
+        PotionType base = meta.getBasePotionType();
+        // Only touch instant-health splash potions.
+        if (base != PotionType.HEALING && base != PotionType.STRONG_HEALING) return null;
+
+        int level = plugin.getConfig().getInt("tiers." + tier + ".kit.health-potion-level", 1);
+        PotionType expected = level >= 2 ? PotionType.STRONG_HEALING : PotionType.HEALING;
+        if (base == expected) return null;
+
+        ItemStack normalized = item.clone();
+        PotionMeta nMeta = (PotionMeta) normalized.getItemMeta();
+        nMeta.setBasePotionType(expected);
+        normalized.setItemMeta(nMeta);
+        return normalized;
     }
 
     private ItemStack normalizeSword(ItemStack item, int tier) {
