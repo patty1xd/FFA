@@ -22,6 +22,16 @@ public class PlayerJoinListener implements Listener {
         var player = event.getPlayer();
         plugin.getTierManager().initPlayer(player.getUniqueId());
         plugin.getStatsManager().initPlayer(player.getUniqueId(), player.getName());
+
+        // Always send players to the FFA spawn on join. Delayed a couple ticks so
+        // it reliably overrides the vanilla first-join / world-spawn location.
+        if (plugin.getSpawnManager().hasSpawn()) {
+            org.bukkit.Location spawn = plugin.getSpawnManager().getSpawn();
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (player.isOnline()) player.teleport(spawn);
+            }, 2L);
+        }
+
         plugin.getBoardManager().updatePlayer(player);
         plugin.getBoardManager().updateNameTag(player);
         plugin.getNormalizationManager().normalizePlayer(player, false);
